@@ -11,6 +11,13 @@ APPX_DIR="$ROOT/dist/appx"
 PACKAGE_DIR="$ROOT/dist/ServerFlow-Installer"
 RELEASE_DIR="$ROOT/dist/release"
 TEMPLATE="$ROOT/tools/installer-template"
+VERSION="$(sed -n 's:.*<AssemblyVersion>\([^<]*\)</AssemblyVersion>.*:\1:p' "$PROJECT" | head -n 1)"
+if [[ -z "$VERSION" ]]; then
+  echo "Cannot read AssemblyVersion from $PROJECT" >&2
+  exit 1
+fi
+MSIX_NAME="ServerFlow_${VERSION}_x64.msix"
+SHORT_VERSION="${VERSION%.0}"
 
 if [[ ! -f "$PFX" || ! -f "$CER" ]]; then
   echo "Windows-compatible test certificate not found in tools/signing." >&2
@@ -39,13 +46,14 @@ MSIX_WIN="$(cygpath -w "$MSIX")"
 mkdir -p "$PACKAGE_DIR" "$RELEASE_DIR"
 find "$PACKAGE_DIR" -maxdepth 1 -type f -delete
 find "$RELEASE_DIR" -maxdepth 1 -type f -delete
-cp "$MSIX" "$PACKAGE_DIR/ServerFlow_1.0.2.0_x64.msix"
+cp "$MSIX" "$PACKAGE_DIR/$MSIX_NAME"
 cp "$CER" "$PACKAGE_DIR/ServerFlow-Local.cer"
 cp "$TEMPLATE/Install-ServerFlow.cmd" "$PACKAGE_DIR/"
 cp "$TEMPLATE/INSTALL.txt" "$PACKAGE_DIR/"
+sed -i "s/__VERSION__/${VERSION}/g; s/__SHORT__/${SHORT_VERSION}/g" "$PACKAGE_DIR/INSTALL.txt"
 cp "$TEMPLATE/ServerFlow.appinstaller" "$PACKAGE_DIR/"
 
-for file in "$PACKAGE_DIR/ServerFlow_1.0.2.0_x64.msix" "$PACKAGE_DIR/ServerFlow-Local.cer" \
+for file in "$PACKAGE_DIR/$MSIX_NAME" "$PACKAGE_DIR/ServerFlow-Local.cer" \
             "$PACKAGE_DIR/Install-ServerFlow.cmd" "$PACKAGE_DIR/INSTALL.txt" \
             "$PACKAGE_DIR/ServerFlow.appinstaller"; do
   cp "$file" "$RELEASE_DIR/"
@@ -74,6 +82,6 @@ print(f'ZIP: {output} ({output.stat().st_size:,} bytes)')
 print((release / 'SHA256SUMS.txt').read_text(encoding='ascii'))
 PY
 
-echo "MSIX: $PACKAGE_DIR/ServerFlow_1.0.2.0_x64.msix"
+echo "MSIX: $PACKAGE_DIR/$MSIX_NAME"
 echo "AppInstaller: $PACKAGE_DIR/ServerFlow.appinstaller"
 echo "Release assets: $RELEASE_DIR"

@@ -121,6 +121,7 @@
                                                     </Border>
                                                     <TextBlock Text="{Binding RecurrenceText}" Foreground="{ThemeResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" />
                                                 </StackPanel>
+                                                <TextBlock Text="{Binding DetailText}" Visibility="{Binding DetailVisibility}" Foreground="{ThemeResource SecondaryTextBrush}" FontSize="11.5" TextWrapping="WrapWholeWords" />
                                                 <TextBlock Text="{Binding Note}" Visibility="{Binding NoteVisibility}" Foreground="{ThemeResource SecondaryTextBrush}" FontSize="12" TextWrapping="WrapWholeWords" />
                                             </StackPanel>
                                             <Button Grid.Column="1" Style="{StaticResource SubtleButtonStyle}" VerticalAlignment="Top" Tag="{Binding Id}" Click="DeleteSchedule_Click" AutomationProperties.Name="删除排班">

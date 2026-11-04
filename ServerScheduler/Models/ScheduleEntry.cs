@@ -74,6 +74,24 @@ public sealed class ScheduleEntry
         }
     }
 
+    /// <summary>
+    /// 返回与指定日期有交集的占用，包含从前一天延续进来、以及延续到后一天的排班。
+    /// </summary>
+    public IEnumerable<ScheduleOccurrence> GetOccurrencesOverlapping(DateOnly date)
+    {
+        var dayStart = date.ToDateTime(TimeOnly.MinValue);
+        var dayEnd = dayStart.AddDays(1);
+        var lookBehindDays = Math.Max(1, (int)Math.Ceiling(DurationHours / 24d) + 1);
+
+        foreach (var occurrence in GetOccurrences(date.AddDays(-lookBehindDays), date))
+        {
+            if (occurrence.Start < dayEnd && dayStart < occurrence.End)
+            {
+                yield return occurrence;
+            }
+        }
+    }
+
     private ScheduleOccurrence CreateOccurrence(DateOnly date)
     {
         var start = date.ToDateTime(StartTime);

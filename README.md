@@ -10,9 +10,11 @@
 
 - 月历视图，单击日期查看当天占用。
 - 单次、每天、每周重复；可设置开始时间、占用小时数和重复截止日期。
+- 长时长排班按日历日切割显示：50 小时会依次在起始日、整天、结束日占用，并显示每天实际小时数。
+- 添加排班时实时预览结束时间与跨越的日历日数。
 - 前台操作 / 后台运行两种资源使用方式。
 - 可选备注；无姓名、账号、登录或用户档案。
-- 时间冲突阻止保存；覆盖跨午夜和长期周期规则。
+- 时间冲突阻止保存；覆盖跨午夜、跨多日以及长期周期规则。
 - 本地 JSON 原子写入，断网可用。
 - 网络仅用于：
   - 读取公开 HTTPS 响应的 `Date` 头校准时间；
@@ -57,7 +59,7 @@ bash tools/build_msix.sh
 
 1. 更新 `Package.appxmanifest`、`.csproj` 和 `tools/installer-template/ServerFlow.appinstaller` 中的版本。
 2. 运行 `tools/build_msix.sh`。
-3. 将 `dist/release/` 中文件上传到 GitHub Release，标签格式 `v1.0.2`。
+3. 将 `dist/release/` 中文件上传到 GitHub Release，标签格式 `v1.0.3`。
 4. 更新 `tools/installer-template/ServerFlow.appinstaller` 中的 `MainPackage Uri` 为本次版本化 MSIX 资产地址，并推送到 `main`；App Installer 通过仓库 raw URL 读取更新源。
 
 ## 数据位置

@@ -23,6 +23,7 @@
                 <TimePicker x:Name="StartTimePicker" x:FieldModifier="public" Header="开始时间" ClockIdentifier="24HourClock" MinuteIncrement="5" HorizontalAlignment="Stretch" />
                 <NumberBox x:Name="DurationBox" x:FieldModifier="public" Grid.Column="1" Header="占用时长（小时）" Minimum="0.5" Maximum="168" Value="2" SmallChange="0.5" LargeChange="1" SpinButtonPlacementMode="Compact" HorizontalAlignment="Stretch" />
             </Grid>
+            <TextBlock x:Name="EndPreview" x:FieldModifier="public" FontSize="12" Foreground="{ThemeResource SecondaryTextBrush}" TextWrapping="Wrap" />
             <CalendarDatePicker x:Name="RepeatEndPicker" x:FieldModifier="public" Header="重复截止日期（留空则长期）" HorizontalAlignment="Stretch" Visibility="Collapsed" />
             <RadioButtons x:Name="ModeOptions" x:FieldModifier="public" Header="使用方式" SelectedIndex="0">
                 <x:String>前台操作（有人值守）</x:String>

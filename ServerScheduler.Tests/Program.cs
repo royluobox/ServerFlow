@@ -9,7 +9,14 @@ var tests = new (string Name, Action Run)[]
     ("重叠排班被识别", OverlapIsRejected),
     ("首尾相接不算冲突", AdjacentBookingsAreAllowed),
     ("跨午夜冲突被识别", CrossMidnightOverlapIsRejected),
-    ("长期周期冲突被识别", RecurringOverlapIsRejected)
+    ("长期周期冲突被识别", RecurringOverlapIsRejected),
+    ("50 小时排班均分到 3 个日历日", LongBookingSplitsAcrossDays),
+    ("跨天排班在后续日期被识别冲突", LongBookingBlocksFollowingDay),
+    ("长排班反向覆盖已有短排班", LongBookingCoversEarlierShortBooking),
+    ("长排班结束后不再冲突", LongBookingAllowsLaterBooking),
+    ("50 小时预览显示跨 3 天", PreviewShowsLongBookingSpan),
+    ("当天结束的预览", PreviewShowsSameDayBooking),
+    ("正好到午夜的预览算当天", PreviewTreatsMidnightAsSameDay)
 };
 
 var failed = 0;
@@ -90,4 +97,69 @@ static void RecurringOverlapIsRejected()
     var existing = Entry(new DateOnly(2026, 11, 4), 9, 2, RecurrenceKind.Weekly);
     var candidate = Entry(new DateOnly(2026, 12, 1), 10, 1, RecurrenceKind.Daily);
     Assert(ScheduleConflictService.FindConflict(candidate, [existing]) is not null, "周期重叠未识别");
+}
+
+static void LongBookingSplitsAcrossDays()
+{
+    var entry = Entry(new DateOnly(2026, 11, 4), 9, 50);
+    var hours = new[] { 4, 5, 6, 7 }
+        .Select(day => ScheduleDayLayout.BuildSegments([entry], new DateOnly(2026, 11, day)))
+        .Select(segments => segments.Sum(segment => segment.Hours))
+        .ToArray();
+
+    Assert(hours[0] == 15, $"首日应为 15 小时，实际 {hours[0]}");
+    Assert(hours[1] == 24, $"次日应为全天 24 小时，实际 {hours[1]}");
+    Assert(hours[2] == 11, $"第三日应为 11 小时，实际 {hours[2]}");
+    Assert(hours[3] == 0, $"结束日之后不应有占用，实际 {hours[3]}");
+
+    var firstDay = ScheduleDayLayout.BuildSegments([entry], new DateOnly(2026, 11, 4)).Single();
+    var middleDay = ScheduleDayLayout.BuildSegments([entry], new DateOnly(2026, 11, 5)).Single();
+    var lastDay = ScheduleDayLayout.BuildSegments([entry], new DateOnly(2026, 11, 6)).Single();
+
+    Assert(!firstDay.ContinuesFromPreviousDay && firstDay.ContinuesToNextDay, "首日跨天标记错误");
+    Assert(middleDay.ContinuesFromPreviousDay && middleDay.ContinuesToNextDay, "次日应为全天承接");
+    Assert(lastDay.ContinuesFromPreviousDay && !lastDay.ContinuesToNextDay, "第三日跨天标记错误");
+    Assert(ScheduleDayLayout.FormatCellRange(middleDay) == "全天", $"全天文案错误：{ScheduleDayLayout.FormatCellRange(middleDay)}");
+    Assert(ScheduleDayLayout.FormatCellRange(lastDay) == "00:00–11:00", $"末日文案错误：{ScheduleDayLayout.FormatCellRange(lastDay)}");
+}
+
+static void LongBookingBlocksFollowingDay()
+{
+    var existing = Entry(new DateOnly(2026, 11, 4), 9, 50);
+    var candidate = Entry(new DateOnly(2026, 11, 5), 10, 2);
+    Assert(ScheduleConflictService.FindConflict(candidate, [existing]) is not null, "长排班占用的后续日期未被判定冲突");
+}
+
+static void LongBookingCoversEarlierShortBooking()
+{
+    var existing = Entry(new DateOnly(2026, 11, 5), 10, 2);
+    var candidate = Entry(new DateOnly(2026, 11, 4), 9, 50);
+    Assert(ScheduleConflictService.FindConflict(candidate, [existing]) is not null, "长排班未覆盖已有短排班");
+}
+
+static void LongBookingAllowsLaterBooking()
+{
+    var existing = Entry(new DateOnly(2026, 11, 6), 12, 2);
+    var candidate = Entry(new DateOnly(2026, 11, 4), 9, 50);
+    Assert(ScheduleConflictService.FindConflict(candidate, [existing]) is null, "长排班结束后仍被误判冲突");
+}
+
+static void PreviewShowsLongBookingSpan()
+{
+    var text = BookingPreview.Describe(new DateOnly(2026, 11, 4), new TimeSpan(9, 0, 0), 50);
+    Assert(text.Contains("11月6日 11:00"), $"结束时间错误：{text}");
+    Assert(text.Contains("跨 3 个日历日"), $"跨天数量错误：{text}");
+}
+
+static void PreviewShowsSameDayBooking()
+{
+    var text = BookingPreview.Describe(new DateOnly(2026, 11, 4), new TimeSpan(9, 0, 0), 2);
+    Assert(text.Contains("当天结束"), $"当天结束文案错误：{text}");
+}
+
+static void PreviewTreatsMidnightAsSameDay()
+{
+    var text = BookingPreview.Describe(new DateOnly(2026, 11, 4), new TimeSpan(21, 0, 0), 3);
+    Assert(text.Contains("11月5日 00:00"), $"结束时间错误：{text}");
+    Assert(text.Contains("当天结束"), "正好到午夜被误判为跨天");
 }

@@ -7,6 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\ServerScheduler\Models\ScheduleEntry.cs" Link="ScheduleEntry.cs" />
+    <Compile Include="..\ServerScheduler\Models\DaySegment.cs" Link="DaySegment.cs" />
     <Compile Include="..\ServerScheduler\Services\ScheduleConflictService.cs" Link="ScheduleConflictService.cs" />
+    <Compile Include="..\ServerScheduler\Services\ScheduleDayLayout.cs" Link="ScheduleDayLayout.cs" />
+    <Compile Include="..\ServerScheduler\Services\BookingPreview.cs" Link="BookingPreview.cs" />
   </ItemGroup>
 </Project>

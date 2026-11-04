@@ -3,7 +3,7 @@
          xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
          xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
          IgnorableNamespaces="uap rescap">
-  <Identity Name="ServerFlow.Scheduler" Publisher="CN=ServerFlow Local" Version="1.0.2.0" />
+  <Identity Name="ServerFlow.Scheduler" Publisher="CN=ServerFlow Local" Version="1.0.3.0" />
   <Properties>
     <DisplayName>ServerFlow 服务器排班</DisplayName>
     <PublisherDisplayName>ServerFlow</PublisherDisplayName>

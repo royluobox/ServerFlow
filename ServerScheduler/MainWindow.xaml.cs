@@ -93,13 +93,13 @@ public sealed partial class MainWindow : Window
         for (var index = 0; index < 42; index++)
         {
             var date = gridStart.AddDays(index);
-            var entries = _schedules.Where(entry => entry.OccursOn(date)).ToList();
+            var segments = ScheduleDayLayout.BuildSegments(_schedules, date);
             var cell = new DayCell();
             cell.DayClicked += DayCell_DayClicked;
             CalendarGrid.Children.Add(cell);
             Grid.SetRow(cell, index / 7);
             Grid.SetColumn(cell, index % 7);
-            cell.SetDay(date, date.Month != _displayMonth.Month, date == today, date == _selectedDate, entries);
+            cell.SetDay(date, date.Month != _displayMonth.Month, date == today, date == _selectedDate, segments);
         }
     }
 
@@ -110,14 +110,12 @@ public sealed partial class MainWindow : Window
         SelectedDateSubtitle.Text = $"{_selectedDate.Year}年 · 星期{ScheduleText.Weekday(_selectedDate.DayOfWeek)}"
             + (_selectedDate == today ? " · 今天" : string.Empty);
 
-        var entries = _schedules.Where(entry => entry.OccursOn(_selectedDate))
-            .OrderBy(entry => entry.StartTime)
-            .ToList();
+        var segments = ScheduleDayLayout.BuildSegments(_schedules, _selectedDate);
         var items = new List<ScheduleListItem>();
 
-        foreach (var entry in entries)
+        foreach (var segment in segments)
         {
-            var occurrence = entry.GetOccurrences(_selectedDate, _selectedDate).First();
+            var entry = segment.Entry;
             var isForeground = entry.Mode == UsageMode.Foreground;
             var recurrenceText = entry.Recurrence switch
             {
@@ -128,12 +126,20 @@ public sealed partial class MainWindow : Window
                 _ => string.Empty
             };
 
+            var detail = segment.ContinuesFromPreviousDay
+                ? $"承接 {segment.Occurrence.Start:M月d日 HH:mm} 起 · 本日 {segment.Hours:0.#} 小时"
+                : segment.IsMultiDay
+                    ? $"本日 {segment.Hours:0.#} 小时 · 整段 {entry.DurationHours:0.#} 小时"
+                    : string.Empty;
+
             items.Add(new ScheduleListItem
             {
                 Id = entry.Id,
-                TimeRange = FormatTimeRange(occurrence),
+                TimeRange = ScheduleDayLayout.FormatDetailRange(segment),
                 ModeText = isForeground ? "前台操作" : "后台运行",
                 RecurrenceText = recurrenceText,
+                DetailText = detail,
+                DetailVisibility = string.IsNullOrEmpty(detail) ? Visibility.Collapsed : Visibility.Visible,
                 Note = entry.Note,
                 NoteVisibility = string.IsNullOrWhiteSpace(entry.Note) ? Visibility.Collapsed : Visibility.Visible,
                 ModeForeground = ThemeResourceHelper.GetBrush(isForeground ? "AccentBrush" : "BackgroundModeBrush", RootGrid.ActualTheme),
@@ -143,22 +149,13 @@ public sealed partial class MainWindow : Window
 
         ScheduleList.ItemsSource = items;
         EmptyState.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        DaySummary.Text = items.Count == 0 ? string.Empty : $"共 {items.Count} 项 · 合计 {entries.Sum(entry => entry.DurationHours):0.#} 小时";
-    }
 
-    private static string FormatTimeRange(ScheduleOccurrence occurrence)
-    {
-        if (occurrence.Start.Date == occurrence.End.Date)
-        {
-            return $"{occurrence.Start:HH:mm} – {occurrence.End:HH:mm}";
-        }
-
-        if (occurrence.End.Date == occurrence.Start.Date.AddDays(1))
-        {
-            return $"{occurrence.Start:HH:mm} – 次日 {occurrence.End:HH:mm}";
-        }
-
-        return $"{occurrence.Start:M月d日 HH:mm} – {occurrence.End:M月d日 HH:mm}";
+        var dayHours = ScheduleDayLayout.TotalHours(segments);
+        var continuesToNextDay = segments.Any(segment => segment.ContinuesToNextDay);
+        DaySummary.Text = items.Count == 0
+            ? string.Empty
+            : $"共 {items.Count} 项 · 本日占用 {dayHours:0.#} 小时"
+                + (continuesToNextDay ? " · 延续到次日" : string.Empty);
     }
 
     private void DayCell_DayClicked(object? sender, DateOnly date)
@@ -266,7 +263,7 @@ public sealed partial class MainWindow : Window
             {
                 var other = conflict.Existing;
                 var mode = other.Entry.Mode == UsageMode.Foreground ? "前台操作" : "后台运行";
-                ShowDialogError($"与 {other.Start:M月d日 HH:mm} 的{mode}排班冲突，请调整时间或时长。");
+                ShowDialogError($"与 {ScheduleDayLayout.FormatFullSpan(other)} 的{mode}排班冲突，请调整时间或时长。");
                 return;
             }
 

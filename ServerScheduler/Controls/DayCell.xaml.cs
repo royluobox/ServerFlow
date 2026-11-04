@@ -22,7 +22,7 @@ public sealed partial class DayCell : UserControl
         ActualThemeChanged += (_, _) => RefreshAppearance();
     }
 
-    public void SetDay(DateOnly date, bool isOutsideMonth, bool isToday, bool isSelected, IReadOnlyList<ScheduleEntry> schedules)
+    public void SetDay(DateOnly date, bool isOutsideMonth, bool isToday, bool isSelected, IReadOnlyList<DaySegment> segments)
     {
         _date = date;
         _isOutsideMonth = isOutsideMonth;
@@ -33,34 +33,26 @@ public sealed partial class DayCell : UserControl
         DayNumber.Visibility = isToday ? Visibility.Collapsed : Visibility.Visible;
         TodayBadge.Visibility = isToday ? Visibility.Visible : Visibility.Collapsed;
         MonthLabel.Text = date.Day == 1 ? $"{date.Month}月" : string.Empty;
-        HoursLabel.Text = schedules.Count > 0 ? $"{schedules.Sum(item => item.DurationHours):0.#}h" : string.Empty;
+
+        var dayHours = ScheduleDayLayout.TotalHours(segments);
+        var spansDays = segments.Any(segment => segment.IsMultiDay);
+        HoursLabel.Text = segments.Count == 0
+            ? string.Empty
+            : spansDays
+                ? $"{dayHours:0.#}h · 跨天"
+                : $"{dayHours:0.#}h";
 
         ItemsPanel.Children.Clear();
-        foreach (var entry in schedules.OrderBy(item => item.StartTime).Take(3))
+        foreach (var segment in segments.Take(3))
         {
-            var foregroundKey = entry.Mode == UsageMode.Foreground ? "AccentBrush" : "BackgroundModeBrush";
-            var backgroundKey = entry.Mode == UsageMode.Foreground ? "AccentSoftBrush" : "BackgroundModeSoftBrush";
-            var itemBorder = new Border
-            {
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(5, 2, 5, 2),
-                Background = ThemeResourceHelper.GetBrush(backgroundKey, ActualTheme)
-            };
-            itemBorder.Child = new TextBlock
-            {
-                Text = $"{entry.StartTime:HH:mm}  {(entry.Mode == UsageMode.Foreground ? "前台" : "后台")} · {entry.DurationHours:0.#}h",
-                FontSize = 10.5,
-                Foreground = ThemeResourceHelper.GetBrush(foregroundKey, ActualTheme),
-                TextTrimming = TextTrimming.CharacterEllipsis
-            };
-            ItemsPanel.Children.Add(itemBorder);
+            ItemsPanel.Children.Add(CreateSegmentItem(segment));
         }
 
-        if (schedules.Count > 3)
+        if (segments.Count > 3)
         {
             ItemsPanel.Children.Add(new TextBlock
             {
-                Text = $"还有 {schedules.Count - 3} 项",
+                Text = $"还有 {segments.Count - 3} 项",
                 FontSize = 10,
                 Foreground = ThemeResourceHelper.GetBrush("TertiaryTextBrush", ActualTheme),
                 Margin = new Thickness(3, 0, 0, 0)
@@ -68,6 +60,40 @@ public sealed partial class DayCell : UserControl
         }
 
         RefreshAppearance();
+    }
+
+    private Border CreateSegmentItem(DaySegment segment)
+    {
+        var entry = segment.Entry;
+        var isForeground = entry.Mode == UsageMode.Foreground;
+        var foregroundKey = isForeground ? "AccentBrush" : "BackgroundModeBrush";
+        var backgroundKey = isForeground ? "AccentSoftBrush" : "BackgroundModeSoftBrush";
+
+        var itemBorder = new Border
+        {
+            CornerRadius = new CornerRadius(
+                segment.ContinuesFromPreviousDay ? 0 : 4,
+                segment.ContinuesToNextDay ? 0 : 4,
+                segment.ContinuesToNextDay ? 0 : 4,
+                segment.ContinuesFromPreviousDay ? 0 : 4),
+            Padding = new Thickness(4, 2, 4, 2),
+            Background = ThemeResourceHelper.GetBrush(backgroundKey, ActualTheme)
+        };
+
+        itemBorder.Child = new TextBlock
+        {
+            Text = $"{ScheduleDayLayout.FormatCellRange(segment)} {(isForeground ? "前台" : "后台")}",
+            FontSize = 10,
+            Foreground = ThemeResourceHelper.GetBrush(foregroundKey, ActualTheme),
+            TextTrimming = TextTrimming.CharacterEllipsis
+        };
+
+        var span = ScheduleDayLayout.FormatFullSpan(segment.Occurrence);
+        ToolTipService.SetToolTip(itemBorder,
+            $"{span}\n{(isForeground ? "前台操作" : "后台运行")} · 共 {entry.DurationHours:0.#} 小时"
+            + (segment.IsMultiDay ? $"\n本日占用 {segment.Hours:0.#} 小时" : string.Empty));
+
+        return itemBorder;
     }
 
     private void RefreshAppearance()
