@@ -10,7 +10,10 @@ public static class ScheduleConflictService
 
     public static ScheduleConflict? FindConflict(ScheduleEntry candidate, IEnumerable<ScheduleEntry> existingEntries)
     {
-        var existing = existingEntries.Where(entry => entry.Id != candidate.Id).ToList();
+        // 前台操作与后台运行互不冲突：只有同一使用方式之间才需要抢占同一时段。
+        var existing = existingEntries
+            .Where(entry => entry.Id != candidate.Id && entry.Mode == candidate.Mode)
+            .ToList();
         var rangeEnd = candidate.EndDate ?? candidate.StartDate.AddDays(LookAheadDays);
         if (candidate.Recurrence == RecurrenceKind.Once)
         {

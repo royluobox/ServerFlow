@@ -51,7 +51,17 @@
                                 <FontIcon Glyph="&#xE76C;" FontSize="14" />
                             </Button>
                         </StackPanel>
-                        <TextBlock Grid.Column="1" Text="单击日期即可查看或添加占用" Foreground="{ThemeResource SecondaryTextBrush}" FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <Border Width="8" Height="8" CornerRadius="2" Background="{ThemeResource AccentBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="前台" FontSize="11" Foreground="{ThemeResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <Border Width="8" Height="8" CornerRadius="2" Background="{ThemeResource BackgroundModeBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="后台" FontSize="11" Foreground="{ThemeResource SecondaryTextBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Text="单击日期查看或添加占用" FontSize="11" Foreground="{ThemeResource TertiaryTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
                         <Button Grid.Column="2" Content="回到今天" Click="Today_Click" CornerRadius="6" Padding="14,7" VerticalAlignment="Center" />
                     </Grid>
 

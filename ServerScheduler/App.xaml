@@ -15,6 +15,7 @@
                     <SolidColorBrush x:Key="CalendarCellHoverBrush" Color="#08000000" />
                     <SolidColorBrush x:Key="CalendarCellSelectedBrush" Color="#180A67FF" />
                     <SolidColorBrush x:Key="ScheduleCardBrush" Color="#08000000" />
+                    <SolidColorBrush x:Key="TimelineTrackBrush" Color="#0B000000" />
                     <SolidColorBrush x:Key="AccentBrush" Color="#0A67FF" />
                     <SolidColorBrush x:Key="AccentSoftBrush" Color="#140A67FF" />
                     <SolidColorBrush x:Key="BackgroundModeBrush" Color="#007A78" />
@@ -31,6 +32,7 @@
                     <SolidColorBrush x:Key="CalendarCellHoverBrush" Color="#0CFFFFFF" />
                     <SolidColorBrush x:Key="CalendarCellSelectedBrush" Color="#306F8FFF" />
                     <SolidColorBrush x:Key="ScheduleCardBrush" Color="#0CFFFFFF" />
+                    <SolidColorBrush x:Key="TimelineTrackBrush" Color="#1AFFFFFF" />
                     <SolidColorBrush x:Key="AccentBrush" Color="#79A8FF" />
                     <SolidColorBrush x:Key="AccentSoftBrush" Color="#2879A8FF" />
                     <SolidColorBrush x:Key="BackgroundModeBrush" Color="#63C5C2" />

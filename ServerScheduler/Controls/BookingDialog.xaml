@@ -29,6 +29,7 @@
                 <x:String>前台操作（有人值守）</x:String>
                 <x:String>后台运行（仅占用资源）</x:String>
             </RadioButtons>
+            <TextBlock Text="前台与后台互不冲突，可以占用同一时段；同一使用方式之间仍会阻止重叠。" Foreground="{ThemeResource SecondaryTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,-6,0,0" />
             <TextBox x:Name="NoteBox" x:FieldModifier="public" Header="备注（可选）" MaxLength="80" PlaceholderText="例如：训练任务、数据分析" TextWrapping="Wrap" />
             <InfoBar x:Name="DialogInfo" x:FieldModifier="public" Severity="Error" IsClosable="False" IsOpen="False" />
         </StackPanel>

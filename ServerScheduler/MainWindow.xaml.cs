@@ -27,7 +27,7 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         SystemBackdrop = new MicaBackdrop();
-        AppWindow.Resize(new SizeInt32(1240, 840));
+        AppWindow.Resize(new SizeInt32(1360, 880));
 
         var today = DateOnly.FromDateTime(DateTime.Now);
         _selectedDate = today;
@@ -150,11 +150,15 @@ public sealed partial class MainWindow : Window
         ScheduleList.ItemsSource = items;
         EmptyState.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        var dayHours = ScheduleDayLayout.TotalHours(segments);
+        var foregroundHours = segments.Where(item => item.Entry.Mode == UsageMode.Foreground).Sum(item => item.Hours);
+        var backgroundHours = segments.Where(item => item.Entry.Mode == UsageMode.Background).Sum(item => item.Hours);
+        var hoursText = foregroundHours > 0 && backgroundHours > 0
+            ? $"前台 {foregroundHours:0.#} 小时 · 后台 {backgroundHours:0.#} 小时"
+            : $"本日占用 {foregroundHours + backgroundHours:0.#} 小时";
         var continuesToNextDay = segments.Any(segment => segment.ContinuesToNextDay);
         DaySummary.Text = items.Count == 0
             ? string.Empty
-            : $"共 {items.Count} 项 · 本日占用 {dayHours:0.#} 小时"
+            : $"共 {items.Count} 项 · {hoursText}"
                 + (continuesToNextDay ? " · 延续到次日" : string.Empty);
     }
 

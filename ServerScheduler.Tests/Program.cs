@@ -16,7 +16,10 @@ var tests = new (string Name, Action Run)[]
     ("长排班结束后不再冲突", LongBookingAllowsLaterBooking),
     ("50 小时预览显示跨 3 天", PreviewShowsLongBookingSpan),
     ("当天结束的预览", PreviewShowsSameDayBooking),
-    ("正好到午夜的预览算当天", PreviewTreatsMidnightAsSameDay)
+    ("正好到午夜的预览算当天", PreviewTreatsMidnightAsSameDay),
+    ("前台与后台同一时段不冲突", ForegroundAndBackgroundDoNotConflict),
+    ("后台与后台仍然冲突", BackgroundStillConflictsWithBackground),
+    ("后台长排班不阻挡前台", LongBackgroundBookingAllowsForeground)
 };
 
 var failed = 0;
@@ -37,12 +40,18 @@ foreach (var test in tests)
 Console.WriteLine($"{tests.Length - failed}/{tests.Length} tests passed");
 return failed == 0 ? 0 : 1;
 
-static ScheduleEntry Entry(DateOnly date, int hour, double duration, RecurrenceKind recurrence = RecurrenceKind.Once) => new()
+static ScheduleEntry Entry(
+    DateOnly date,
+    int hour,
+    double duration,
+    RecurrenceKind recurrence = RecurrenceKind.Once,
+    UsageMode mode = UsageMode.Foreground) => new()
 {
     StartDate = date,
     StartTime = new TimeOnly(hour, 0),
     DurationHours = duration,
-    Recurrence = recurrence
+    Recurrence = recurrence,
+    Mode = mode
 };
 
 static void Assert(bool condition, string message)
@@ -162,4 +171,28 @@ static void PreviewTreatsMidnightAsSameDay()
     var text = BookingPreview.Describe(new DateOnly(2026, 11, 4), new TimeSpan(21, 0, 0), 3);
     Assert(text.Contains("11月5日 00:00"), $"结束时间错误：{text}");
     Assert(text.Contains("当天结束"), "正好到午夜被误判为跨天");
+}
+
+static void ForegroundAndBackgroundDoNotConflict()
+{
+    var existing = Entry(new DateOnly(2026, 11, 4), 9, 2, mode: UsageMode.Background);
+    var candidate = Entry(new DateOnly(2026, 11, 4), 9, 2, mode: UsageMode.Foreground);
+    Assert(ScheduleConflictService.FindConflict(candidate, [existing]) is null, "前台与后台被误判冲突");
+
+    var reverse = ScheduleConflictService.FindConflict(existing, [candidate]);
+    Assert(reverse is null, "后台与前台被误判冲突");
+}
+
+static void BackgroundStillConflictsWithBackground()
+{
+    var existing = Entry(new DateOnly(2026, 11, 4), 9, 2, mode: UsageMode.Background);
+    var candidate = Entry(new DateOnly(2026, 11, 4), 10, 1, mode: UsageMode.Background);
+    Assert(ScheduleConflictService.FindConflict(candidate, [existing]) is not null, "后台之间重叠未识别");
+}
+
+static void LongBackgroundBookingAllowsForeground()
+{
+    var existing = Entry(new DateOnly(2026, 11, 4), 9, 50, mode: UsageMode.Background);
+    var candidate = Entry(new DateOnly(2026, 11, 5), 10, 2, mode: UsageMode.Foreground);
+    Assert(ScheduleConflictService.FindConflict(candidate, [existing]) is null, "后台长排班错误阻挡前台排班");
 }
