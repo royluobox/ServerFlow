@@ -1,0 +1,65 @@
+ServerFlow 服务器排班 1.0.1
+==========================
+
+安装
+----
+1. 从 GitHub Releases 下载并解压全部文件。
+2. 双击 Install-ServerFlow.cmd，在 UAC 窗口点“是”。
+3. 脚本将测试证书导入“本机计算机 > 受信任的根证书颁发机构”，
+   再通过 ServerFlow.appinstaller 安装 MSIX 并注册更新源。
+4. 从开始菜单打开“ServerFlow 服务器排班”。
+
+手动安装：
+- 以管理员身份运行：
+  certutil.exe -f -addstore Root ServerFlow-Local.cer
+- 再运行：
+  Add-AppxPackage -Path .\ServerFlow.appinstaller -AppInstallerFile
+- 若 App Installer 源不可达，可回退：
+  Add-AppxPackage -Path .\ServerFlow_x64.msix -ForceUpdateFromAnyVersion
+
+更新
+----
+- 应用底部有“检查更新”按钮，读取 GitHub Releases 最新版本。
+- App Installer 在启动时按 24 小时间隔检查；系统后台任务约每 8 小时检查一次。
+- 更新从 https://github.com/royluobox/ServerFlow/releases/latest 自动获取。
+- 首个 Release 使用本地测试证书签名；保持该证书受信任即可静默更新。
+
+系统要求
+--------
+Windows 10 1809 或更高版本，x64。推荐 Windows 11。
+应用包含 .NET 8 与 Windows App SDK 运行组件，无需另装运行库。
+首次安装需要一次管理员批准；应用运行时不需要管理员权限。
+
+文件校验
+--------
+各文件 SHA256 见 SHA256SUMS.txt。
+签名证书: CN=ServerFlow Local
+证书指纹(SHA1): C16B8C5B509B82C3B679EAEE8309EA77437CCBD2
+证书有效期至: 2029-11-04
+
+使用
+----
+- 单击日期查看占用，点击“添加排班”。
+- 支持单次、每天、每周重复，可设开始时间、时长和截止日期。
+- “前台操作”表示有人值守；“后台运行”表示程序仅占用服务器资源。
+- 备注可选，无需姓名或账号。
+- 时间冲突会阻止保存；周期排班删除时会删除整条规则。
+- 网络仅用于公开 HTTPS 校时及 GitHub 版本检查，不上传排班内容。
+- 断网时使用本机时间，排班功能仍可完整使用。
+
+数据位置
+--------
+%LOCALAPPDATA%\Packages\ServerFlow.Scheduler_pbhj1ej857fh2\LocalCache\Local\ServerFlow\schedules.json
+卸载应用前如需保留数据，请先备份此文件。
+
+卸载
+----
+Windows 设置 > 应用 > 安装的应用 > ServerFlow 服务器排班 > 卸载。
+如需清理测试证书，以管理员身份运行 certlm.msc，
+在“受信任的根证书颁发机构”中删除 CN=ServerFlow Local。
+
+签名说明
+--------
+这是本地测试签名安装包，不是商业代码签名证书。
+系统可能提示发布者未知；只安装来自可信 Release 且 SHA256 匹配的文件。
+正式发布可替换为商业代码签名证书或改用 Microsoft Store 分发。

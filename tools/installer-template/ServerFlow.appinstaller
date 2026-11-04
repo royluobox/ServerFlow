@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppInstaller
+    xmlns="http://schemas.microsoft.com/appx/appinstaller/2017/2"
+    xmlns:s4="http://schemas.microsoft.com/appx/appinstaller/2018"
+    Version="1.0.1.0"
+    Uri="https://github.com/royluobox/ServerFlow/releases/latest/download/ServerFlow.appinstaller">
+    <MainPackage
+        Name="ServerFlow.Scheduler"
+        Publisher="CN=ServerFlow Local"
+        Version="1.0.1.0"
+        ProcessorArchitecture="x64"
+        Uri="https://github.com/royluobox/ServerFlow/releases/latest/download/ServerFlow_x64.msix" />
+    <UpdateSettings>
+        <OnLaunch HoursBetweenUpdateChecks="24" ShowPrompt="false" />
+        <s4:AutomaticBackgroundTask />
+        <s4:ForceUpdateFromAnyVersion>true</s4:ForceUpdateFromAnyVersion>
+    </UpdateSettings>
+</AppInstaller>

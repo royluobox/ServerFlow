@@ -1,0 +1,40 @@
+# Build outputs
+[Bb]in/
+[Oo]bj/
+dist/
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Workspace and local tooling
+.workbuddy/
+tools/dotnet8/
+tools/dotnet-install.ps1
+tools/dotnet-install.sh
+tools/signing/
+tools/xaml-probes/
+tools/Install-AsAdmin.ps1
+tools/capture_window.py
+tools/capture_window_direct.py
+tools/ui_action.py
+tools/probe_xaml.py
+tools/probe_mainwindow.py
+tools/admin-install-result.json
+
+# Signing and release secrets
+*.pfx
+*.pem
+*.key
+*.cer
+*.msix
+*.appx
+*.msixupload
+*.appxupload
+
+# OS noise
+Thumbs.db
+ehthumbs.db
+Desktop.ini

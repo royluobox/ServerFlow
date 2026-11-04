@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog x:Class="ServerScheduler.Controls.BookingDialog"
+               xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               Title="添加排班"
+               PrimaryButtonText="保存"
+               CloseButtonText="取消"
+               DefaultButton="Primary">
+    <ScrollViewer MaxHeight="610" VerticalScrollBarVisibility="Auto">
+        <StackPanel Width="420" Spacing="14" Padding="0,0,8,0">
+            <CalendarDatePicker x:Name="BookingDatePicker" x:FieldModifier="public" Header="开始日期" HorizontalAlignment="Stretch" />
+            <RadioButtons x:Name="RepeatOptions" x:FieldModifier="public" Header="重复方式" SelectedIndex="0" SelectionChanged="RepeatOptions_SelectionChanged">
+                <x:String>仅一次</x:String>
+                <x:String>每天重复</x:String>
+                <x:String>每周重复</x:String>
+            </RadioButtons>
+            <TextBlock x:Name="WeeklyHint" Text="每周按开始日期的星期重复" Foreground="{ThemeResource SecondaryTextBrush}" FontSize="12" Visibility="Collapsed" />
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TimePicker x:Name="StartTimePicker" x:FieldModifier="public" Header="开始时间" ClockIdentifier="24HourClock" MinuteIncrement="5" HorizontalAlignment="Stretch" />
+                <NumberBox x:Name="DurationBox" x:FieldModifier="public" Grid.Column="1" Header="占用时长（小时）" Minimum="0.5" Maximum="168" Value="2" SmallChange="0.5" LargeChange="1" SpinButtonPlacementMode="Compact" HorizontalAlignment="Stretch" />
+            </Grid>
+            <CalendarDatePicker x:Name="RepeatEndPicker" x:FieldModifier="public" Header="重复截止日期（留空则长期）" HorizontalAlignment="Stretch" Visibility="Collapsed" />
+            <RadioButtons x:Name="ModeOptions" x:FieldModifier="public" Header="使用方式" SelectedIndex="0">
+                <x:String>前台操作（有人值守）</x:String>
+                <x:String>后台运行（仅占用资源）</x:String>
+            </RadioButtons>
+            <TextBox x:Name="NoteBox" x:FieldModifier="public" Header="备注（可选）" MaxLength="80" PlaceholderText="例如：训练任务、数据分析" TextWrapping="Wrap" />
+            <InfoBar x:Name="DialogInfo" x:FieldModifier="public" Severity="Error" IsClosable="False" IsOpen="False" />
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>
