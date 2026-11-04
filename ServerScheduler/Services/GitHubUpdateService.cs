@@ -22,7 +22,7 @@ public sealed class GitHubUpdateService
     private const string ReleasePage = $"https://github.com/{Owner}/{Repository}/releases/latest";
 
     public const string AppInstallerUrl =
-        $"https://github.com/{Owner}/{Repository}/releases/latest/download/ServerFlow.appinstaller";
+        $"https://raw.githubusercontent.com/{Owner}/{Repository}/main/tools/installer-template/ServerFlow.appinstaller";
 
     private readonly HttpClient _httpClient = new()
     {
@@ -36,7 +36,7 @@ public sealed class GitHubUpdateService
     }
 
     public static Version CurrentVersion =>
-        Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 0, 1, 0);
+        Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 0, 2, 0);
 
     public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
     {

@@ -25,14 +25,15 @@
 
 > 当前 Release 使用项目自签名测试证书。首次安装需要一次 UAC 批准，把证书加入本机受信任根证书存储；应用运行时不需要管理员权限。使用商业代码签名证书或 Microsoft Store 分发可去掉这一限制。
 
-应用通过 `ServerFlow.appinstaller` 安装，以注册 GitHub Releases 更新源。
+应用通过 `ServerFlow.appinstaller` 安装，以注册仓库 raw 文件中的更新源。
 
 ## 自动更新
 
 - 底部有“检查更新”按钮，调用 GitHub Releases API 比对版本。
 - App Installer 启动时按 24 小时间隔检查更新。
 - Windows 后台任务约每 8 小时检查一次，且不会弹窗。
-- `ServerFlow.appinstaller` 使用稳定的 `releases/latest/download` 地址；发布新版时更新该文件与 MSIX 资产即可。
+- 更新源是仓库 `main` 分支中的 `tools/installer-template/ServerFlow.appinstaller`，通过 raw.githubusercontent.com 访问。
+- 每个版本使用带版本号的 Release 资产地址，避免同名 CDN 缓存；发布新版时同步更新 raw 文件中的 `MainPackage Uri`。
 
 ## 构建
 
@@ -56,8 +57,8 @@ bash tools/build_msix.sh
 
 1. 更新 `Package.appxmanifest`、`.csproj` 和 `tools/installer-template/ServerFlow.appinstaller` 中的版本。
 2. 运行 `tools/build_msix.sh`。
-3. 将 `dist/release/` 中文件上传到 GitHub Release，标签格式 `v1.0.1`。
-4. 保持 `ServerFlow_x64.msix` 与 `ServerFlow.appinstaller` 文件名不变，自动更新地址才始终有效。
+3. 将 `dist/release/` 中文件上传到 GitHub Release，标签格式 `v1.0.2`。
+4. 更新 `tools/installer-template/ServerFlow.appinstaller` 中的 `MainPackage Uri` 为本次版本化 MSIX 资产地址，并推送到 `main`；App Installer 通过仓库 raw URL 读取更新源。
 
 ## 数据位置
 

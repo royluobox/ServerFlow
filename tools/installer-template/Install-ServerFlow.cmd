@@ -10,7 +10,7 @@ echo Installing test certificate to LocalMachine Root...
 if errorlevel 1 goto failed
 
 echo Installing ServerFlow with App Installer update source...
-powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Add-AppxPackage -Path (Join-Path $PWD 'ServerFlow.appinstaller') -AppInstallerFile -ForceTargetApplicationShutdown } catch { Add-AppxPackage -Path (Join-Path $PWD 'ServerFlow_x64.msix') -ForceUpdateFromAnyVersion -ForceApplicationShutdown }"
+powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Add-AppxPackage -Path (Join-Path $PWD 'ServerFlow.appinstaller') -AppInstallerFile -ForceTargetApplicationShutdown } catch { Add-AppxPackage -Path (Join-Path $PWD 'ServerFlow_1.0.2.0_x64.msix') -ForceUpdateFromAnyVersion -ForceApplicationShutdown }"
 if errorlevel 1 goto failed
 
 echo.

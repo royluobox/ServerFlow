@@ -39,13 +39,13 @@ MSIX_WIN="$(cygpath -w "$MSIX")"
 mkdir -p "$PACKAGE_DIR" "$RELEASE_DIR"
 find "$PACKAGE_DIR" -maxdepth 1 -type f -delete
 find "$RELEASE_DIR" -maxdepth 1 -type f -delete
-cp "$MSIX" "$PACKAGE_DIR/ServerFlow_x64.msix"
+cp "$MSIX" "$PACKAGE_DIR/ServerFlow_1.0.2.0_x64.msix"
 cp "$CER" "$PACKAGE_DIR/ServerFlow-Local.cer"
 cp "$TEMPLATE/Install-ServerFlow.cmd" "$PACKAGE_DIR/"
 cp "$TEMPLATE/INSTALL.txt" "$PACKAGE_DIR/"
 cp "$TEMPLATE/ServerFlow.appinstaller" "$PACKAGE_DIR/"
 
-for file in "$PACKAGE_DIR/ServerFlow_x64.msix" "$PACKAGE_DIR/ServerFlow-Local.cer" \
+for file in "$PACKAGE_DIR/ServerFlow_1.0.2.0_x64.msix" "$PACKAGE_DIR/ServerFlow-Local.cer" \
             "$PACKAGE_DIR/Install-ServerFlow.cmd" "$PACKAGE_DIR/INSTALL.txt" \
             "$PACKAGE_DIR/ServerFlow.appinstaller"; do
   cp "$file" "$RELEASE_DIR/"
@@ -74,6 +74,6 @@ print(f'ZIP: {output} ({output.stat().st_size:,} bytes)')
 print((release / 'SHA256SUMS.txt').read_text(encoding='ascii'))
 PY
 
-echo "MSIX: $PACKAGE_DIR/ServerFlow_x64.msix"
+echo "MSIX: $PACKAGE_DIR/ServerFlow_1.0.2.0_x64.msix"
 echo "AppInstaller: $PACKAGE_DIR/ServerFlow.appinstaller"
 echo "Release assets: $RELEASE_DIR"

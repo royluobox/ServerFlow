@@ -1,4 +1,4 @@
-ServerFlow 服务器排班 1.0.1
+ServerFlow 服务器排班 1.0.2
 ==========================
 
 安装
@@ -15,14 +15,16 @@ ServerFlow 服务器排班 1.0.1
 - 再运行：
   Add-AppxPackage -Path .\ServerFlow.appinstaller -AppInstallerFile
 - 若 App Installer 源不可达，可回退：
-  Add-AppxPackage -Path .\ServerFlow_x64.msix -ForceUpdateFromAnyVersion
+  Add-AppxPackage -Path .\ServerFlow_1.0.2.0_x64.msix -ForceUpdateFromAnyVersion
 
 更新
 ----
 - 应用底部有“检查更新”按钮，读取 GitHub Releases 最新版本。
 - App Installer 在启动时按 24 小时间隔检查；系统后台任务约每 8 小时检查一次。
-- 更新从 https://github.com/royluobox/ServerFlow/releases/latest 自动获取。
-- 首个 Release 使用本地测试证书签名；保持该证书受信任即可静默更新。
+- 更新源位于仓库 raw 文件：
+  https://raw.githubusercontent.com/royluobox/ServerFlow/main/tools/installer-template/ServerFlow.appinstaller
+- 每个版本使用独立的 Release 资产地址，避免同名 CDN 缓存。
+- Release 使用本地测试证书签名；保持该证书受信任即可静默更新。
 
 系统要求
 --------
@@ -44,7 +46,7 @@ Windows 10 1809 或更高版本，x64。推荐 Windows 11。
 - “前台操作”表示有人值守；“后台运行”表示程序仅占用服务器资源。
 - 备注可选，无需姓名或账号。
 - 时间冲突会阻止保存；周期排班删除时会删除整条规则。
-- 网络仅用于公开 HTTPS 校时及 GitHub 版本检查，不上传排班内容。
+- 网络仅用于公开 HTTPS 校时、GitHub 版本检查和更新下载；不上传排班内容。
 - 断网时使用本机时间，排班功能仍可完整使用。
 
 数据位置
