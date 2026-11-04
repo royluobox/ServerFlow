@@ -72,6 +72,8 @@ for directory in (release, folder):
     cmd_path.write_bytes(text.encode('ascii'))
 checksums = []
 for file in sorted(release.iterdir()):
+    if file.name == 'SHA256SUMS.txt':
+        continue
     checksums.append(f"{hashlib.sha256(file.read_bytes()).hexdigest().upper()}  {file.name}\n")
 (release / 'SHA256SUMS.txt').write_text(''.join(checksums), encoding='ascii')
 (folder / 'SHA256SUMS.txt').write_text(''.join(checksums), encoding='ascii')

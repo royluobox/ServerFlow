@@ -23,9 +23,12 @@
 
 ## 安装
 
-从 [Releases](https://github.com/royluobox/ServerFlow/releases/latest) 下载全部资产并解压，运行 `Install-ServerFlow.cmd`。
+从 [Releases](https://github.com/royluobox/ServerFlow/releases/latest) 下载全部资产并解压，然后二选一：
 
-> 当前 Release 使用项目自签名测试证书。首次安装需要一次 UAC 批准，把证书加入本机受信任根证书存储；应用运行时不需要管理员权限。使用商业代码签名证书或 Microsoft Store 分发可去掉这一限制。
+- **直接双击** `ServerFlow_<版本>_x64.msix`，在安装窗口点“安装”。证书已受信任时不需要管理员权限，也不会弹 UAC。
+- **双击** `Install-ServerFlow.cmd`。脚本会先判断证书是否已受信任：已受信任则直接安装；未受信任则请求一次 UAC，导入证书后安装，并注册 App Installer 更新源。
+
+> 当前 Release 使用项目自签名测试证书。**只有“证书尚未受信任”这一步需要管理员批准**，用于把证书加入本机受信任根证书存储。证书受信任后，安装、升级和运行都不需要管理员权限。使用商业代码签名证书或 Microsoft Store 分发可完全去掉这一步。
 
 应用通过 `ServerFlow.appinstaller` 安装，以注册仓库 raw 文件中的更新源。
 
