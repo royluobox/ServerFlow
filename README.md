@@ -34,13 +34,13 @@
 不要双击 `ServerFlow.appinstaller`：它是自动更新源配置，不是安装入口，双击会报 `Error in parsing the app package`。
 应用通过 `ServerFlow.appinstaller` 安装，以注册仓库 raw 文件中的更新源。
 
-## 自动更新
+## 检查更新
 
-- 底部有“检查更新”按钮，调用 GitHub Releases API 比对版本。
-- App Installer 启动时按 24 小时间隔检查更新。
-- Windows 后台任务约每 8 小时检查一次，且不会弹窗。
-- 更新源是仓库 `main` 分支中的 `tools/installer-template/ServerFlow.appinstaller`，通过 raw.githubusercontent.com 访问。
-- 每个版本使用带版本号的 Release 资产地址，避免同名 CDN 缓存；发布新版时同步更新 raw 文件中的 `MainPackage Uri`。
+- 底部“检查更新”按钮读取仓库 `main` 分支中 `tools/installer-template/ServerFlow.appinstaller` 的版本号，与当前程序集版本比较。
+- **不使用 GitHub REST API**：匿名调用每 IP 每小时只有 60 次额度，会返回 `403 rate limit exceeded`。raw 文件不受限流影响，API 仅作后备渠道。
+- 启动时自动检查一次；发现新版本时提示下载 `ServerFlow-Setup.exe` 覆盖安装，排班数据保留。
+- Windows 11 默认禁用 `ms-appinstaller:` 协议，因此不再依赖它做自动安装。
+- 每个版本使用带版本号的 Release 资产地址，避免同名 CDN 缓存；发布新版时同步更新 raw 文件中的 `Version` 与 `MainPackage Uri`。raw 有约 5 分钟 CDN 缓存。
 
 ## 构建
 
