@@ -37,11 +37,13 @@ ServerFlow 服务器排班 __SHORT__
 
 更新
 ----
-- 应用底部「检查更新」按钮读取 GitHub Releases 最新版本，并显示是否已是最新。
+- 应用底部「检查更新」按钮读取仓库中的版本文件，并显示是否已是最新。
+- 发现新版本后点「立即更新」即可：应用自动下载安装包、校验 SHA256、安装并重启，
+  全程不需要管理员权限，也不需要手动下载任何文件。
 - 用 Install-ServerFlow.cmd 安装的机器还会注册 App Installer 更新源，
   系统会在启动时按 24 小时、后台约每 8 小时自动检查。
 - 用 ServerFlow-Setup.exe 安装的机器不注册该系统更新源，请用应用内按钮更新；
-  或直接运行新版安装器覆盖安装，排班数据会保留。
+  应用内「立即更新」会直接升级；也可运行新版安装器覆盖安装，排班数据都会保留。
 - 更新源位于仓库 raw 文件：
   https://raw.githubusercontent.com/royluobox/ServerFlow/main/tools/installer-template/ServerFlow.appinstaller
 - 每个版本使用独立的 Release 资产地址，避免同名 CDN 缓存。

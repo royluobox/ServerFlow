@@ -397,24 +397,7 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
-            var updateDialog = new ContentDialog
-            {
-                XamlRoot = RootGrid.XamlRoot,
-                Title = "发现新版本",
-                Content = $"当前版本 v{result.CurrentVersion.ToString(3)}，最新版本 {result.TagName}。\n\n"
-                    + "下载新的安装程序后双击即可覆盖安装，排班数据会保留。",
-                PrimaryButtonText = "下载安装包",
-                CloseButtonText = "稍后",
-                DefaultButton = ContentDialogButton.Primary
-            };
-
-            if (await updateDialog.ShowAsync() == ContentDialogResult.Primary)
-            {
-                if (!await GitHubUpdateService.LaunchSetupDownloadAsync())
-                {
-                    await GitHubUpdateService.LaunchReleasePageAsync(result.ReleaseUrl);
-                }
-            }
+            await ShowUpdateDialogAsync(result);
         }
         else
         {
@@ -425,6 +408,96 @@ public sealed partial class MainWindow : Window
                     $"当前版本 v{result.CurrentVersion.ToString(3)}。\n\n启动时会自动检查一次，也可随时点击“检查更新”。");
             }
         }
+    }
+
+    private async Task ShowUpdateDialogAsync(UpdateCheckResult result)
+    {
+        var description = new TextBlock
+        {
+            Text = $"当前版本 v{result.CurrentVersion.ToString(3)}，最新版本 {result.TagName}。\n\n"
+                + "点击“立即更新”会自动下载并安装，完成后应用重新启动，排班数据不受影响。",
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        var progressBar = new ProgressBar
+        {
+            Minimum = 0,
+            Maximum = 1,
+            Visibility = Visibility.Collapsed
+        };
+
+        var progressText = new TextBlock
+        {
+            FontSize = 12,
+            Opacity = 0.7,
+            Visibility = Visibility.Collapsed
+        };
+
+        var panel = new StackPanel { Spacing = 10 };
+        panel.Children.Add(description);
+        panel.Children.Add(progressBar);
+        panel.Children.Add(progressText);
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = RootGrid.XamlRoot,
+            Title = "发现新版本",
+            Content = panel,
+            PrimaryButtonText = "立即更新",
+            CloseButtonText = "稍后",
+            DefaultButton = ContentDialogButton.Primary
+        };
+
+        dialog.PrimaryButtonClick += async (_, args) =>
+        {
+            var deferral = args.GetDeferral();
+            args.Cancel = true;
+
+            if (result.PackageUri is null)
+            {
+                await GitHubUpdateService.LaunchReleasePageAsync(result.ReleaseUrl);
+                deferral.Complete();
+                return;
+            }
+
+            try
+            {
+                dialog.IsPrimaryButtonEnabled = false;
+                dialog.CloseButtonText = string.Empty;
+                progressBar.Visibility = Visibility.Visible;
+                progressText.Visibility = Visibility.Visible;
+
+                var progress = new Progress<double>(value =>
+                {
+                    progressBar.Value = value;
+                    progressText.Text = $"正在下载… {value:P0}";
+                });
+
+                var packagePath = await PackageUpdater.DownloadAsync(result.PackageUri, progress, CancellationToken.None);
+                progressText.Text = "正在校验安装包…";
+                await PackageUpdater.VerifyAsync(packagePath, result.ChecksumsUri, CancellationToken.None);
+
+                progressText.Text = "正在安装，应用即将重新启动…";
+                PackageUpdater.StartInstallerAndExit(packagePath);
+                await Task.Delay(800);
+                Application.Current.Exit();
+            }
+            catch (Exception ex)
+            {
+                dialog.IsPrimaryButtonEnabled = true;
+                dialog.CloseButtonText = "关闭";
+                progressBar.Visibility = Visibility.Collapsed;
+                progressText.Visibility = Visibility.Collapsed;
+                description.Text = "更新失败：" + ex.Message
+                    + "\n\n可稍后重试，或前往 GitHub Releases 手动下载安装包。";
+            }
+            finally
+            {
+                deferral.Complete();
+            }
+        };
+
+        await dialog.ShowAsync();
     }
 
     private async Task ShowMessageAsync(string title, string message)

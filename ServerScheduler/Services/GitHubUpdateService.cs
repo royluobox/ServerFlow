@@ -13,6 +13,8 @@ public sealed record UpdateCheckResult(
     Version? LatestVersion,
     string? TagName,
     string? ReleaseUrl,
+    Uri? PackageUri,
+    Uri? ChecksumsUri,
     string? Error);
 
 public sealed class GitHubUpdateService
@@ -59,7 +61,7 @@ public sealed class GitHubUpdateService
             return fromApi;
         }
 
-        return new UpdateCheckResult(false, false, CurrentVersion, null, null, ReleasePage,
+        return new UpdateCheckResult(false, false, CurrentVersion, null, null, ReleasePage, null, null,
             "暂时无法获取版本信息，请检查网络连接后重试。");
     }
 
@@ -89,8 +91,9 @@ public sealed class GitHubUpdateService
             }
 
             var tag = "v" + latestVersion.ToString(3);
+            var packageUri = TryCreateUri(mainPackage?.Attribute("Uri")?.Value);
             return new UpdateCheckResult(true, latestVersion > CurrentVersion, CurrentVersion,
-                latestVersion, tag, BuildReleaseUrl(tag), null);
+                latestVersion, tag, BuildReleaseUrl(tag), packageUri, BuildChecksumsUri(tag), null);
         }
         catch
         {
@@ -124,8 +127,10 @@ public sealed class GitHubUpdateService
                 return null;
             }
 
+            var packageUri = FindAsset(root, ".msix");
+            var checksumsUri = FindAsset(root, "SHA256SUMS.txt");
             return new UpdateCheckResult(true, latestVersion > CurrentVersion, CurrentVersion,
-                latestVersion, tag, releaseUrl, null);
+                latestVersion, tag, releaseUrl, packageUri, checksumsUri, null);
         }
         catch
         {
@@ -151,6 +156,45 @@ public sealed class GitHubUpdateService
 
     private static string BuildReleaseUrl(string tag) =>
         $"https://github.com/{Owner}/{Repository}/releases/tag/{tag}";
+
+    private static Uri BuildChecksumsUri(string tag) =>
+        new($"https://github.com/{Owner}/{Repository}/releases/download/{tag}/SHA256SUMS.txt");
+
+    private static Uri? TryCreateUri(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
+            ? uri
+            : null;
+    }
+
+    private static Uri? FindAsset(JsonElement release, string suffix)
+    {
+        if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var asset in assets.EnumerateArray())
+        {
+            var name = asset.TryGetProperty("name", out var nameElement) ? nameElement.GetString() : null;
+            if (name is null || !name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var url = asset.TryGetProperty("browser_download_url", out var urlElement)
+                ? urlElement.GetString()
+                : null;
+            return TryCreateUri(url);
+        }
+
+        return null;
+    }
 
     private static bool TryParseVersion(string value, out Version version)
     {
