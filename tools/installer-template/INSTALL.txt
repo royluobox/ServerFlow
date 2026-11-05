@@ -3,38 +3,38 @@ ServerFlow 服务器排班 __SHORT__
 
 安装
 ----
-解压全部文件后，任选一种：
+双击 ServerFlow-Setup.exe，在 UAC 窗口点“是”，等几秒即完成。
+不需要解压、不需要提前信任证书、不需要改系统设置。
+安装器会自动完成：证书信任 → 应用安装 → 启动程序。
 
-方式 A 直接双击（最简单）
-1. 双击 ServerFlow___VERSION___x64.msix。
-2. 在安装窗口点“安装”。装完自动启动。
-   证书已受信任时不需要管理员权限，也不会弹 UAC。
+其他文件（可选，一般用不到）
+- ServerFlow___VERSION___x64.msix
+  应用安装包本体。证书已受信任时可直接双击，点“安装”。
+- ServerFlow-Local.cer
+  自签名测试证书，仅手动安装时需要。
+- Install-ServerFlow.cmd
+  命令行安装脚本，行为与安装器一致。
 
-方式 B 双击脚本（自动注册自动更新源）
-双击 Install-ServerFlow.cmd。脚本会先判断证书是否已受信任：
-- 已受信任：直接安装，无 UAC。
-- 未受信任：请求一次 UAC，导入证书后安装，并注册 App Installer 更新源。
+重要：不要双击 ServerFlow.appinstaller。
+它是自动更新源配置文件，不是安装入口；双击会报
+“Error in parsing the app package（无法解析安装包）”。
 
-新机器首次安装
-.msix 使用自签名测试证书。若双击后提示证书不受信任（0x800B0109）：
-先双击 Install-ServerFlow.cmd 完成一次证书信任，之后即可双击 .msix 安装与升级。
-
-命令行安装：
+手动安装（命令行）：
 - 以管理员身份运行：
   certutil.exe -f -addstore Root ServerFlow-Local.cer
-- 再运行（推荐，同时注册更新源）：
-  Add-AppxPackage -Path .\ServerFlow.appinstaller -AppInstallerFile
-- 或直接装包：
+- 再运行：
   Add-AppxPackage -Path .\ServerFlow___VERSION___x64.msix -ForceUpdateFromAnyVersion
 
 更新
 ----
-- 应用底部有“检查更新”按钮，读取 GitHub Releases 最新版本。
-- App Installer 在启动时按 24 小时间隔检查；系统后台任务约每 8 小时检查一次。
+- 应用底部「检查更新」按钮读取 GitHub Releases 最新版本，并显示是否已是最新。
+- 用 Install-ServerFlow.cmd 安装的机器还会注册 App Installer 更新源，
+  系统会在启动时按 24 小时、后台约每 8 小时自动检查。
+- 用 ServerFlow-Setup.exe 安装的机器不注册该系统更新源，请用应用内按钮更新；
+  或直接运行新版安装器覆盖安装，排班数据会保留。
 - 更新源位于仓库 raw 文件：
   https://raw.githubusercontent.com/royluobox/ServerFlow/main/tools/installer-template/ServerFlow.appinstaller
 - 每个版本使用独立的 Release 资产地址，避免同名 CDN 缓存。
-- Release 使用本地测试证书签名；保持该证书受信任即可静默更新。
 
 系统要求
 --------

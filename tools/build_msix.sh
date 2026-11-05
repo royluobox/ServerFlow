@@ -61,11 +61,10 @@ done
 
 RELEASE_DIR_WIN="$(cygpath -w "$RELEASE_DIR")"
 PACKAGE_DIR_WIN="$(cygpath -w "$PACKAGE_DIR")"
-ZIP_WIN="$(cygpath -w "$ROOT/dist/ServerFlow-Setup.zip")"
-python - "$RELEASE_DIR_WIN" "$PACKAGE_DIR_WIN" "$ZIP_WIN" <<'PY'
+python - "$RELEASE_DIR_WIN" "$PACKAGE_DIR_WIN" <<'PY'
 from pathlib import Path
-import hashlib, sys, zipfile
-release, folder, output = map(Path, sys.argv[1:])
+import hashlib, sys
+release, folder = map(Path, sys.argv[1:])
 for directory in (release, folder):
     cmd_path = directory / 'Install-ServerFlow.cmd'
     text = cmd_path.read_text(encoding='ascii').replace('\r\n', '\n').replace('\n', '\r\n')
@@ -77,10 +76,6 @@ for file in sorted(release.iterdir()):
     checksums.append(f"{hashlib.sha256(file.read_bytes()).hexdigest().upper()}  {file.name}\n")
 (release / 'SHA256SUMS.txt').write_text(''.join(checksums), encoding='ascii')
 (folder / 'SHA256SUMS.txt').write_text(''.join(checksums), encoding='ascii')
-with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-    for file in sorted(folder.iterdir()):
-        archive.write(file, file.name)
-print(f'ZIP: {output} ({output.stat().st_size:,} bytes)')
 print((release / 'SHA256SUMS.txt').read_text(encoding='ascii'))
 PY
 

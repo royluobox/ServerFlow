@@ -23,13 +23,15 @@
 
 ## 安装
 
-从 [Releases](https://github.com/royluobox/ServerFlow/releases/latest) 下载全部资产并解压，然后二选一：
+下载 **[ServerFlow-Setup.exe](https://github.com/royluobox/ServerFlow/releases/latest/download/ServerFlow-Setup.exe)**，双击，在 UAC 窗口点“是”。
 
-- **直接双击** `ServerFlow_<版本>_x64.msix`，在安装窗口点“安装”。证书已受信任时不需要管理员权限，也不会弹 UAC。
-- **双击** `Install-ServerFlow.cmd`。脚本会先判断证书是否已受信任：已受信任则直接安装；未受信任则请求一次 UAC，导入证书后安装，并注册 App Installer 更新源。
+单文件安装器已内嵌应用包与签名证书，会自动完成证书信任、应用安装和启动。不需要解压、不需要提前信任证书、不需要改系统设置。
 
-> 当前 Release 使用项目自签名测试证书。**只有“证书尚未受信任”这一步需要管理员批准**，用于把证书加入本机受信任根证书存储。证书受信任后，安装、升级和运行都不需要管理员权限。使用商业代码签名证书或 Microsoft Store 分发可完全去掉这一步。
+> 安装器使用项目自签名测试证书，签名的 EXE 与 MSIX 共用同一张证书。Windows 只在首次运行已签名 EXE 时可能提示“未知发布者”；证书信任后不再提示。商业代码签名证书可完全消除该提示。
 
+其他下载项：`ServerFlow_<版本>_x64.msix`（应用包本体，证书已受信任时可直接双击安装）、`ServerFlow-Local.cer`、`Install-ServerFlow.cmd`。
+
+不要双击 `ServerFlow.appinstaller`：它是自动更新源配置，不是安装入口，双击会报 `Error in parsing the app package`。
 应用通过 `ServerFlow.appinstaller` 安装，以注册仓库 raw 文件中的更新源。
 
 ## 自动更新
