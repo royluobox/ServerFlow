@@ -14,12 +14,14 @@ if [[ -z "$MSIX" ]]; then
   exit 1
 fi
 VERSION="$(basename "$MSIX" | sed -E 's/^ServerFlow_(.*)_x64\.msix$/\1/')"
+# 展示用版本去掉末尾 .0：1.0.7.0 -> 1.0.7
+APP_VERSION="${VERSION%.0}"
 
 mkdir -p "$PAYLOAD"
 cp "$MSIX" "$PAYLOAD/ServerFlow.msix"
 cp "$ROOT/dist/release/ServerFlow-Local.cer" "$PAYLOAD/ServerFlow-Local.cer"
 
-"$DOTNET" build "$PROJECT" -c Release -p:Version="$VERSION" -p:FileVersion="$VERSION" -v:minimal
+"$DOTNET" build "$PROJECT" -c Release -p:Version="$VERSION" -p:FileVersion="$VERSION" -p:TargetAppVersion="$APP_VERSION" -v:minimal
 
 EXE="$ROOT/SetupLauncher/bin/Release/ServerFlow-Setup.exe"
 if [[ ! -f "$EXE" ]]; then

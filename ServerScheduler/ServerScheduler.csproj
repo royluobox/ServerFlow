@@ -16,9 +16,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <StartupObject>ServerScheduler.Program</StartupObject>
     <ApplicationIcon>Assets\App.ico</ApplicationIcon>
-    <AssemblyVersion>1.0.6.0</AssemblyVersion>
-    <FileVersion>1.0.6.0</FileVersion>
-    <Version>1.0.6</Version>
+    <AssemblyVersion>1.0.7.0</AssemblyVersion>
+    <FileVersion>1.0.7.0</FileVersion>
+    <Version>1.0.7</Version>
     <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
     <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
     <PackageCertificateThumbprint></PackageCertificateThumbprint>

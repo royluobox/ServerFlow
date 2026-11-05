@@ -20,6 +20,9 @@ internal static class Program
         var quiet = args != null && args.Any(a => string.Equals(a, "/quiet", StringComparison.OrdinalIgnoreCase));
         var forceShortcut = args != null && args.Any(a => string.Equals(a, "/shortcut", StringComparison.OrdinalIgnoreCase));
         var renderPath = GetArgumentValue(args, "/render");
+        var forcedState = GetArgumentValue(args, "/state");
+        var forcedPage = GetArgumentValue(args, "/page");
+        var forcedDpi = GetArgumentValue(args, "/dpi");
 
         if (Environment.OSVersion.Version.Major < 10)
         {
@@ -39,16 +42,35 @@ internal static class Program
 
         if (quiet)
         {
-            return Install(installed, forceShortcut, launchAfter: false, interactive: false);
+            return Install(installed, forceShortcut, null, out _, out _) ? 0 : 1;
         }
 
         if (renderPath != null)
         {
             try
             {
-                using (var preview = new WizardForm(installed))
+                var previewState = string.Equals(forcedState, "none", StringComparison.OrdinalIgnoreCase)
+                    ? InstalledPackage.NotInstalled
+                    : (string.Equals(forcedState, "installed", StringComparison.OrdinalIgnoreCase)
+                        ? new InstalledPackage(true, TargetVersion, @"C:\Program Files\WindowsApps\ServerFlow.Scheduler_" +
+                            TargetVersion + ".0_x64__pbhj1ej857fh2")
+                        : installed);
+
+                float? scaleOverride = null;
+                if (float.TryParse(forcedDpi, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var dpiScale) && dpiScale > 0.5f)
+                {
+                    scaleOverride = dpiScale;
+                }
+
+                using (var preview = new WizardForm(previewState, scaleOverride))
                 {
                     preview.Show();
+                    if (forcedPage != null && int.TryParse(forcedPage, out var pageIndex))
+                    {
+                        preview.PreviewPage(pageIndex);
+                    }
+
                     for (var index = 0; index < 6; index++)
                     {
                         Application.DoEvents();
@@ -57,7 +79,7 @@ internal static class Program
 
                     preview.PerformLayout();
                     Application.DoEvents();
-                    using (var bitmap = new Bitmap(preview.ClientSize.Width, preview.ClientSize.Height))
+                    using (var bitmap = new Bitmap(preview.Width, preview.Height))
                     {
                         preview.DrawToBitmap(bitmap, new Rectangle(0, 0, bitmap.Width, bitmap.Height));
                         bitmap.Save(renderPath, System.Drawing.Imaging.ImageFormat.Png);
@@ -77,12 +99,8 @@ internal static class Program
 
         using (var wizard = new WizardForm(installed))
         {
-            if (wizard.ShowDialog() != DialogResult.OK)
-            {
-                return 0;
-            }
-
-            return Install(installed, wizard.CreateShortcut, wizard.LaunchAfterInstall, interactive: true);
+            wizard.ShowDialog();
+            return wizard.ExitCode;
         }
     }
 
@@ -104,77 +122,85 @@ internal static class Program
         return null;
     }
 
-    private static int Install(InstalledPackage installed, bool createShortcut, bool launchAfter, bool interactive)
+    internal static bool Install(
+        InstalledPackage installed,
+        bool createShortcut,
+        Action<string> report,
+        out string error,
+        out string warning)
     {
+        error = null;
+        warning = null;
         var workDir = Path.Combine(Path.GetTempPath(), "ServerFlowSetup-" + Guid.NewGuid().ToString("N").Substring(0, 8));
-        using (var progress = new ProgressForm())
+
+        try
         {
-            if (interactive)
+            Directory.CreateDirectory(workDir);
+
+            Report(report, "正在解压安装文件…");
+            var msix = Extract("ServerFlow.msix", Path.Combine(workDir, "ServerFlow.msix"));
+            var cer = Extract("ServerFlow.cer", Path.Combine(workDir, "ServerFlow-Local.cer"));
+
+            Report(report, "正在校验并信任应用签名证书…");
+            TrustCertificate(cer);
+
+            Report(report, installed.Installed ? "正在覆盖安装…" : "正在安装 ServerFlow 服务器排班…");
+            var result = RunPowerShell(BuildInstallScript(msix), 900000);
+            if (!result.ok)
             {
-                progress.Show();
-                progress.Refresh();
+                throw new InvalidOperationException(Summarize(result.message));
             }
 
-            try
+            if (createShortcut)
             {
-                Directory.CreateDirectory(workDir);
-
-                progress.SetStatus("正在解压安装文件…");
-                var msix = Extract("ServerFlow.msix", Path.Combine(workDir, "ServerFlow.msix"));
-                var cer = Extract("ServerFlow.cer", Path.Combine(workDir, "ServerFlow-Local.cer"));
-
-                progress.SetStatus(installed.Installed ? "正在覆盖安装…" : "正在信任应用签名证书…");
-                TrustCertificate(cer);
-
-                progress.SetStatus("正在安装 ServerFlow 服务器排班…");
-                var result = RunPowerShell(BuildInstallScript(msix), 900000);
-                if (!result.ok)
+                Report(report, "正在创建桌面快捷方式…");
+                var shortcut = CreateDesktopShortcut();
+                if (!shortcut.Ok)
                 {
-                    throw new InvalidOperationException(result.message);
+                    // 安装本身成功，快捷方式失败只作为提示，不打断流程
+                    var reason = Summarize(shortcut.Message);
+                    if (reason.Length > 80)
+                    {
+                        reason = reason.Substring(0, 80) + "…";
+                    }
+
+                    warning = "桌面快捷方式未能创建（" + reason + "），可从开始菜单打开应用。";
                 }
-
-                if (createShortcut)
-                {
-                    progress.SetStatus("正在创建桌面快捷方式…");
-                    CreateDesktopShortcut();
-                }
-
-                if (!interactive)
-                {
-                    return 0;
-                }
-
-                progress.Hide();
-                MessageBox.Show(
-                    installed.Installed
-                        ? "已覆盖安装完成，排班数据保持不变。"
-                        : "ServerFlow 服务器排班 已安装完成。\n\n可从开始菜单打开。",
-                    "安装完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                if (launchAfter)
-                {
-                    Launch();
-                }
-
-                return 0;
             }
-            catch (Exception ex)
-            {
-                if (interactive)
-                {
-                    progress.Hide();
-                    MessageBox.Show("安装失败：\n\n" + ex.Message +
-                        "\n\n可访问 https://github.com/royluobox/ServerFlow 获取安装说明。",
-                        "ServerFlow 安装程序", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
 
-                return 1;
-            }
-            finally
-            {
-                TryDeleteDirectory(workDir);
-            }
+            return true;
         }
+        catch (Exception ex)
+        {
+            error = Summarize(ex.Message);
+            return false;
+        }
+        finally
+        {
+            TryDeleteDirectory(workDir);
+        }
+    }
+
+    private static void Report(Action<string> report, string message)
+    {
+        report?.Invoke(message);
+    }
+
+    internal static string Summarize(string message)
+    {
+        if (string.IsNullOrEmpty(message))
+        {
+            return "系统未返回详细原因，请重试。";
+        }
+
+        var lines = message
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith("+ ", StringComparison.Ordinal))
+            .ToArray();
+
+        var text = string.Join(" ", lines);
+        return text.Length <= 300 ? text : text.Substring(0, 300) + "…";
     }
 
     internal static void Launch()
@@ -194,8 +220,9 @@ internal static class Program
         }
     }
 
-    internal static bool Uninstall(out string message)
+    internal static bool Uninstall(Action<string> report, out string message)
     {
+        Report(report, "正在移除已安装的应用…");
         var script = string.Join("\r\n", new[]
         {
             "$ErrorActionPreference = 'Stop'",
@@ -209,8 +236,136 @@ internal static class Program
         });
 
         var result = RunPowerShell(script, 600000);
-        message = result.ok ? "已卸载 ServerFlow。" : result.message;
-        return result.ok;
+        if (!result.ok)
+        {
+            message = Summarize(result.message);
+            return false;
+        }
+
+        Report(report, "正在清理快捷方式…");
+        RemoveDesktopShortcut();
+        message = "已卸载 ServerFlow。";
+        return true;
+    }
+
+    private static void RemoveDesktopShortcut()
+    {
+        foreach (var desktop in new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory)
+        })
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(desktop))
+                {
+                    continue;
+                }
+
+                var shortcut = Path.Combine(desktop, "ServerFlow 服务器排班.lnk");
+                if (File.Exists(shortcut))
+                {
+                    File.Delete(shortcut);
+                }
+            }
+            catch
+            {
+                // 快捷方式被占用时忽略，不影响卸载结果
+            }
+        }
+
+        foreach (var directory in new[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ServerFlow"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ServerFlow")
+        })
+        {
+            try
+            {
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, true);
+                }
+            }
+            catch
+            {
+                // 图标文件残留不影响卸载
+            }
+        }
+    }
+
+    internal static string TargetVersion
+    {
+        get
+        {
+            var metadata = Assembly.GetExecutingAssembly()
+                .GetCustomAttributes(typeof(AssemblyMetadataAttribute), false)
+                .Cast<AssemblyMetadataAttribute>()
+                .FirstOrDefault(item => string.Equals(item.Key, "TargetAppVersion", StringComparison.Ordinal));
+            if (metadata != null && !string.IsNullOrWhiteSpace(metadata.Value))
+            {
+                return metadata.Value.Trim();
+            }
+
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            if (version == null)
+            {
+                return "1.0.0";
+            }
+
+            return version.Build > 0
+                ? version.Major + "." + version.Minor + "." + version.Build
+                : version.Major + "." + version.Minor;
+        }
+    }
+
+    internal static Icon LoadWindowIcon()
+    {
+        try
+        {
+            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ServerFlow.ico"))
+            {
+                return stream == null ? null : new Icon(stream);
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    internal static Bitmap LoadHeaderIcon(int size)
+    {
+        try
+        {
+            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ServerFlow.ico"))
+            {
+                if (stream == null)
+                {
+                    return null;
+                }
+
+                using (var icon = new Icon(stream))
+                using (var source = icon.ToBitmap())
+                {
+                    var target = new Bitmap(size, size);
+                    using (var graphics = Graphics.FromImage(target))
+                    {
+                        graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                        graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                        graphics.DrawImage(source, new Rectangle(0, 0, size, size));
+                    }
+
+                    return target;
+                }
+            }
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static InstalledPackage QueryInstalled()
@@ -280,66 +435,55 @@ internal static class Program
         }
     }
 
-    internal static void CreateDesktopShortcut()
+    internal static DesktopShortcut.Result CreateDesktopShortcut()
     {
-        var iconPath = ExtractIconForShortcut();
-        var shortcutPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-            "ServerFlow 服务器排班.lnk");
+        var explorer = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            "explorer.exe");
 
-        var shellType = Type.GetTypeFromProgID("WScript.Shell");
-        if (shellType == null)
-        {
-            return;
-        }
-
-        var shell = Activator.CreateInstance(shellType);
-        var shortcut = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell,
-            new object[] { shortcutPath });
-        var shortcutType = shortcut.GetType();
-        shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut,
-            new object[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe") });
-        shortcutType.InvokeMember("Arguments", BindingFlags.SetProperty, null, shortcut,
-            new object[] { "shell:AppsFolder\\" + AppUserModelId });
-        shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut,
-            new object[] { "ServerFlow 服务器排班" });
-        if (iconPath != null)
-        {
-            shortcutType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut,
-                new object[] { iconPath + ",0" });
-        }
-
-        shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
+        return DesktopShortcut.Create(
+            explorer,
+            "shell:AppsFolder\\" + AppUserModelId,
+            ExtractIconForShortcut());
     }
 
     private static string ExtractIconForShortcut()
     {
-        try
+        // 放 ProgramData：跨账户可读，避免快捷方式图标在别的用户下变成空白。
+        var candidates = new[]
         {
-            var directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "ServerFlow");
-            Directory.CreateDirectory(directory);
-            var iconPath = Path.Combine(directory, "ServerFlow.ico");
-            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ServerFlow.ico"))
-            {
-                if (stream == null)
-                {
-                    return null;
-                }
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ServerFlow"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ServerFlow")
+        };
 
-                using (var file = File.Create(iconPath))
-                {
-                    stream.CopyTo(file);
-                }
+        using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ServerFlow.ico"))
+        {
+            if (stream == null)
+            {
+                return null;
             }
 
-            return iconPath;
+            var buffer = new MemoryStream();
+            stream.CopyTo(buffer);
+            var bytes = buffer.ToArray();
+
+            foreach (var directory in candidates)
+            {
+                try
+                {
+                    Directory.CreateDirectory(directory);
+                    var iconPath = Path.Combine(directory, "ServerFlow.ico");
+                    File.WriteAllBytes(iconPath, bytes);
+                    return iconPath;
+                }
+                catch
+                {
+                    // 换下一个可写目录
+                }
+            }
         }
-        catch
-        {
-            return null;
-        }
+
+        return null;
     }
 
     private static string BuildInstallScript(string msixPath)
