@@ -394,8 +394,6 @@ public sealed partial class MainWindow : Window
             UpdateStatus.Text = $"更新：发现 {result.TagName}";
             if (automatic)
             {
-                var launched = await GitHubUpdateService.LaunchAppInstallerAsync();
-                UpdateStatus.Text = launched ? "更新：正在自动安装…" : "更新：请手动安装";
                 return;
             }
 
@@ -403,16 +401,16 @@ public sealed partial class MainWindow : Window
             {
                 XamlRoot = RootGrid.XamlRoot,
                 Title = "发现新版本",
-                Content = $"当前版本 v{result.CurrentVersion.ToString(3)}，最新版本 {result.TagName}。\n\n将通过 Windows App Installer 安装更新。",
-                PrimaryButtonText = "立即更新",
+                Content = $"当前版本 v{result.CurrentVersion.ToString(3)}，最新版本 {result.TagName}。\n\n"
+                    + "下载新的安装程序后双击即可覆盖安装，排班数据会保留。",
+                PrimaryButtonText = "下载安装包",
                 CloseButtonText = "稍后",
                 DefaultButton = ContentDialogButton.Primary
             };
 
             if (await updateDialog.ShowAsync() == ContentDialogResult.Primary)
             {
-                var launched = await GitHubUpdateService.LaunchAppInstallerAsync();
-                if (!launched)
+                if (!await GitHubUpdateService.LaunchSetupDownloadAsync())
                 {
                     await GitHubUpdateService.LaunchReleasePageAsync(result.ReleaseUrl);
                 }
@@ -424,7 +422,7 @@ public sealed partial class MainWindow : Window
             if (!automatic)
             {
                 await ShowMessageAsync("已是最新版本",
-                    $"当前版本 v{result.CurrentVersion.ToString(3)}。\n\n启动时每 24 小时检查一次；系统后台任务约每 8 小时检查一次。");
+                    $"当前版本 v{result.CurrentVersion.ToString(3)}。\n\n启动时会自动检查一次，也可随时点击“检查更新”。");
             }
         }
     }
