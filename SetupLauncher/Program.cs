@@ -10,12 +10,16 @@ using System.Windows.Forms;
 
 internal static class Program
 {
-    private const string AppUserModelId = "ServerFlow.Scheduler_pbhj1ej857fh2!App";
+    private const string PackageName = "ServerFlow.Scheduler";
+    private const string PackageFamilyName = "ServerFlow.Scheduler_pbhj1ej857fh2";
+    private const string AppUserModelId = PackageFamilyName + "!App";
 
     [STAThread]
     private static int Main(string[] args)
     {
         var quiet = args != null && args.Any(a => string.Equals(a, "/quiet", StringComparison.OrdinalIgnoreCase));
+        var forceShortcut = args != null && args.Any(a => string.Equals(a, "/shortcut", StringComparison.OrdinalIgnoreCase));
+        var renderPath = GetArgumentValue(args, "/render");
 
         if (Environment.OSVersion.Version.Major < 10)
         {
@@ -31,10 +35,81 @@ internal static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
+        var installed = QueryInstalled();
+
+        if (quiet)
+        {
+            return Install(installed, forceShortcut, launchAfter: false, interactive: false);
+        }
+
+        if (renderPath != null)
+        {
+            try
+            {
+                using (var preview = new WizardForm(installed))
+                {
+                    preview.Show();
+                    for (var index = 0; index < 6; index++)
+                    {
+                        Application.DoEvents();
+                        System.Threading.Thread.Sleep(80);
+                    }
+
+                    preview.PerformLayout();
+                    Application.DoEvents();
+                    using (var bitmap = new Bitmap(preview.ClientSize.Width, preview.ClientSize.Height))
+                    {
+                        preview.DrawToBitmap(bitmap, new Rectangle(0, 0, bitmap.Width, bitmap.Height));
+                        bitmap.Save(renderPath, System.Drawing.Imaging.ImageFormat.Png);
+                    }
+
+                    preview.Close();
+                }
+
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(renderPath + ".err.txt", ex.ToString());
+                return 2;
+            }
+        }
+
+        using (var wizard = new WizardForm(installed))
+        {
+            if (wizard.ShowDialog() != DialogResult.OK)
+            {
+                return 0;
+            }
+
+            return Install(installed, wizard.CreateShortcut, wizard.LaunchAfterInstall, interactive: true);
+        }
+    }
+
+    private static string GetArgumentValue(string[] args, string name)
+    {
+        if (args == null)
+        {
+            return null;
+        }
+
+        for (var index = 0; index < args.Length - 1; index++)
+        {
+            if (string.Equals(args[index], name, StringComparison.OrdinalIgnoreCase))
+            {
+                return args[index + 1];
+            }
+        }
+
+        return null;
+    }
+
+    private static int Install(InstalledPackage installed, bool createShortcut, bool launchAfter, bool interactive)
+    {
         var workDir = Path.Combine(Path.GetTempPath(), "ServerFlowSetup-" + Guid.NewGuid().ToString("N").Substring(0, 8));
         using (var progress = new ProgressForm())
         {
-            if (!quiet)
+            if (interactive)
             {
                 progress.Show();
                 progress.Refresh();
@@ -48,7 +123,7 @@ internal static class Program
                 var msix = Extract("ServerFlow.msix", Path.Combine(workDir, "ServerFlow.msix"));
                 var cer = Extract("ServerFlow.cer", Path.Combine(workDir, "ServerFlow-Local.cer"));
 
-                progress.SetStatus("正在信任应用签名证书…");
+                progress.SetStatus(installed.Installed ? "正在覆盖安装…" : "正在信任应用签名证书…");
                 TrustCertificate(cer);
 
                 progress.SetStatus("正在安装 ServerFlow 服务器排班…");
@@ -58,23 +133,34 @@ internal static class Program
                     throw new InvalidOperationException(result.message);
                 }
 
-                if (quiet)
+                if (createShortcut)
+                {
+                    progress.SetStatus("正在创建桌面快捷方式…");
+                    CreateDesktopShortcut();
+                }
+
+                if (!interactive)
                 {
                     return 0;
                 }
 
-                progress.SetStatus("安装完成，正在启动…");
                 progress.Hide();
-
-                MessageBox.Show("ServerFlow 服务器排班 已安装完成。\n\n可从开始菜单打开，已为你启动。",
+                MessageBox.Show(
+                    installed.Installed
+                        ? "已覆盖安装完成，排班数据保持不变。"
+                        : "ServerFlow 服务器排班 已安装完成。\n\n可从开始菜单打开。",
                     "安装完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                Launch();
+                if (launchAfter)
+                {
+                    Launch();
+                }
+
                 return 0;
             }
             catch (Exception ex)
             {
-                if (!quiet)
+                if (interactive)
                 {
                     progress.Hide();
                     MessageBox.Show("安装失败：\n\n" + ex.Message +
@@ -86,22 +172,12 @@ internal static class Program
             }
             finally
             {
-                try
-                {
-                    if (Directory.Exists(workDir))
-                    {
-                        Directory.Delete(workDir, true);
-                    }
-                }
-                catch
-                {
-                    // 临时文件清理失败不影响安装结果
-                }
+                TryDeleteDirectory(workDir);
             }
         }
     }
 
-    private static void Launch()
+    internal static void Launch()
     {
         try
         {
@@ -116,6 +192,57 @@ internal static class Program
         {
             // 启动失败时用户仍可从开始菜单打开
         }
+    }
+
+    internal static bool Uninstall(out string message)
+    {
+        var script = string.Join("\r\n", new[]
+        {
+            "$ErrorActionPreference = 'Stop'",
+            "try {",
+            "    Get-AppxPackage -Name '" + PackageName + "' | Remove-AppxPackage",
+            "    Write-Output 'REMOVED'",
+            "} catch {",
+            "    Write-Output ('ERROR: ' + $_.Exception.Message)",
+            "    exit 1",
+            "}"
+        });
+
+        var result = RunPowerShell(script, 600000);
+        message = result.ok ? "已卸载 ServerFlow。" : result.message;
+        return result.ok;
+    }
+
+    private static InstalledPackage QueryInstalled()
+    {
+        var script = string.Join("\r\n", new[]
+        {
+            "$p = Get-AppxPackage -Name '" + PackageName + "' | Select-Object -First 1",
+            "if ($p) { $p.Version.ToString() + '|' + $p.InstallLocation } else { 'NONE' }"
+        });
+
+        var result = RunPowerShell(script, 60000);
+        if (!result.ok)
+        {
+            return InstalledPackage.NotInstalled;
+        }
+
+        var lines = result.message.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var text = lines.Length > 0 ? lines[lines.Length - 1].Trim() : string.Empty;
+        if (text.Length == 0 || text.Equals("NONE", StringComparison.OrdinalIgnoreCase))
+        {
+            return InstalledPackage.NotInstalled;
+        }
+
+        var parts = text.Split('|');
+        var version = parts.Length > 0 ? parts[0].Trim() : string.Empty;
+        var location = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+        if (version.Length == 0)
+        {
+            return InstalledPackage.NotInstalled;
+        }
+
+        return new InstalledPackage(true, version, location);
     }
 
     private static string Extract(string resourceName, string targetPath)
@@ -153,6 +280,68 @@ internal static class Program
         }
     }
 
+    internal static void CreateDesktopShortcut()
+    {
+        var iconPath = ExtractIconForShortcut();
+        var shortcutPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            "ServerFlow 服务器排班.lnk");
+
+        var shellType = Type.GetTypeFromProgID("WScript.Shell");
+        if (shellType == null)
+        {
+            return;
+        }
+
+        var shell = Activator.CreateInstance(shellType);
+        var shortcut = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell,
+            new object[] { shortcutPath });
+        var shortcutType = shortcut.GetType();
+        shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut,
+            new object[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe") });
+        shortcutType.InvokeMember("Arguments", BindingFlags.SetProperty, null, shortcut,
+            new object[] { "shell:AppsFolder\\" + AppUserModelId });
+        shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut,
+            new object[] { "ServerFlow 服务器排班" });
+        if (iconPath != null)
+        {
+            shortcutType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut,
+                new object[] { iconPath + ",0" });
+        }
+
+        shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
+    }
+
+    private static string ExtractIconForShortcut()
+    {
+        try
+        {
+            var directory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ServerFlow");
+            Directory.CreateDirectory(directory);
+            var iconPath = Path.Combine(directory, "ServerFlow.ico");
+            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("ServerFlow.ico"))
+            {
+                if (stream == null)
+                {
+                    return null;
+                }
+
+                using (var file = File.Create(iconPath))
+                {
+                    stream.CopyTo(file);
+                }
+            }
+
+            return iconPath;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static string BuildInstallScript(string msixPath)
     {
         return string.Join("\r\n", new[]
@@ -168,7 +357,7 @@ internal static class Program
         });
     }
 
-    private static (bool ok, string message) RunPowerShell(string script, int timeoutMs)
+    internal static (bool ok, string message) RunPowerShell(string script, int timeoutMs)
     {
         var systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System);
         var powershell = Path.Combine(systemPath, @"WindowsPowerShell\v1.0\powershell.exe");
@@ -203,16 +392,18 @@ internal static class Program
                 {
                 }
 
-                return (false, "安装超时，请重试。");
+                return (false, "操作超时，请重试。");
             }
 
-            var text = (outputTask.Result + Environment.NewLine + errorTask.Result).Trim();
+            var stdout = outputTask.Result.Trim();
             if (process.ExitCode == 0)
             {
-                return (true, text);
+                // stderr 可能带 CLIXML 进度记录，成功时只取 stdout，避免污染输出。
+                return (true, stdout);
             }
 
-            var message = text.Replace("ERROR:", string.Empty).Trim();
+            var message = (stdout + Environment.NewLine + errorTask.Result)
+                .Replace("ERROR:", string.Empty).Trim();
             if (message.Length == 0)
             {
                 message = "系统返回错误码 " + process.ExitCode + "。";
@@ -222,47 +413,36 @@ internal static class Program
         }
     }
 
-    private sealed class ProgressForm : Form
+    private static void TryDeleteDirectory(string path)
     {
-        private readonly Label _status;
-
-        public ProgressForm()
+        try
         {
-            Text = "ServerFlow 安装程序";
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            StartPosition = FormStartPosition.CenterScreen;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ControlBox = false;
-            ShowInTaskbar = true;
-            ClientSize = new Size(440, 112);
-            BackColor = Color.White;
-
-            _status = new Label
+            if (Directory.Exists(path))
             {
-                AutoSize = false,
-                Bounds = new Rectangle(24, 26, 392, 24),
-                Text = "正在准备安装…",
-                Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular),
-                ForeColor = Color.FromArgb(32, 32, 32)
-            };
-
-            var bar = new ProgressBar
-            {
-                Style = ProgressBarStyle.Marquee,
-                MarqueeAnimationSpeed = 28,
-                Bounds = new Rectangle(24, 60, 392, 16)
-            };
-
-            Controls.Add(_status);
-            Controls.Add(bar);
+                Directory.Delete(path, true);
+            }
         }
-
-        public void SetStatus(string text)
+        catch
         {
-            _status.Text = text;
-            _status.Refresh();
-            Application.DoEvents();
+            // 临时文件清理失败不影响安装结果
         }
     }
+}
+
+internal sealed class InstalledPackage
+{
+    public static readonly InstalledPackage NotInstalled = new InstalledPackage(false, string.Empty, string.Empty);
+
+    public InstalledPackage(bool installed, string version, string location)
+    {
+        Installed = installed;
+        Version = version;
+        Location = location;
+    }
+
+    public bool Installed { get; }
+
+    public string Version { get; }
+
+    public string Location { get; }
 }

@@ -25,11 +25,19 @@
 
 下载 **[ServerFlow-Setup.exe](https://github.com/royluobox/ServerFlow/releases/latest/download/ServerFlow-Setup.exe)**，双击，在 UAC 窗口点“是”。
 
-单文件安装器已内嵌应用包与签名证书，会自动完成证书信任、应用安装和启动。不需要解压、不需要提前信任证书、不需要改系统设置。
+安装向导提供：
 
-> 安装器使用项目自签名测试证书，签名的 EXE 与 MSIX 共用同一张证书。Windows 只在首次运行已签名 EXE 时可能提示“未知发布者”；证书信任后不再提示。商业代码签名证书可完全消除该提示。
+- 已安装检测：显示当前版本，按钮变为「覆盖安装」，并额外提供「卸载」。
+- 安装位置信息（程序目录、排班数据路径，只读）。
+- 「创建桌面快捷方式」「安装完成后立即启动」两个选项，默认都勾选。
 
-其他下载项：`ServerFlow_<版本>_x64.msix`（应用包本体，证书已受信任时可直接双击安装）、`ServerFlow-Local.cer`、`Install-ServerFlow.cmd`。
+覆盖安装保留排班数据；卸载会一并删除。
+
+> **安装目录不可自定义**：本程序是 MSIX 应用，Windows 强制安装在 `C:\Program Files\WindowsApps\ServerFlow.Scheduler_<版本>_x64__pbhj1ej857fh2`，任何安装器都无法指定其他路径。如需换盘，可在「设置 → 系统 → 存储 → 应用安装位置」更改新应用的默认磁盘。排班数据存放在用户配置目录，与程序目录无关。
+>
+> 安装器使用项目自签名测试证书。仅在首次运行已签名 EXE 时 Windows 可能提示「未知发布者」；证书信任后不再提示。
+
+其他下载项：`ServerFlow_<版本>_x64.msix`（证书已受信任时可直接双击安装）、`ServerFlow-Local.cer`、`Install-ServerFlow.cmd`。
 
 不要双击 `ServerFlow.appinstaller`：它是自动更新源配置，不是安装入口，双击会报 `Error in parsing the app package`。
 应用通过 `ServerFlow.appinstaller` 安装，以注册仓库 raw 文件中的更新源。

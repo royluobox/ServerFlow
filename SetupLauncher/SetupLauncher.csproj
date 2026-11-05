@@ -24,5 +24,6 @@
   <ItemGroup>
     <EmbeddedResource Include="payload\ServerFlow.msix" LogicalName="ServerFlow.msix" />
     <EmbeddedResource Include="payload\ServerFlow-Local.cer" LogicalName="ServerFlow.cer" />
+    <EmbeddedResource Include="..\ServerScheduler\Assets\App.ico" LogicalName="ServerFlow.ico" />
   </ItemGroup>
 </Project>

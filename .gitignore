@@ -39,3 +39,7 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 SetupLauncher/payload/
+SetupLauncher/bin/
+SetupLauncher/obj/
+SetupLauncher/obj_preview/
+dist/uipreview/
