@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AppInstaller
     xmlns="http://schemas.microsoft.com/appx/appinstaller/2017/2"
-    Version="1.0.13.0"
+    Version="1.0.12.0"
     Uri="https://raw.githubusercontent.com/royluobox/ServerFlow/main/tools/installer-template/ServerFlow.appinstaller">
     <MainPackage
         Name="ServerFlow.Scheduler"
         Publisher="CN=ServerFlow Local"
-        Version="1.0.13.0"
+        Version="1.0.12.0"
         ProcessorArchitecture="x64"
         Uri="https://github.com/royluobox/ServerFlow/releases/download/v1.0.12/ServerFlow_1.0.12.0_x64.msix" />
     <UpdateSettings>
