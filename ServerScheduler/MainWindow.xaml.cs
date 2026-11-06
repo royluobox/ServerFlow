@@ -53,6 +53,7 @@ public sealed partial class MainWindow : Window
         }
 
         RenderAll();
+        ShortcutService.ApplyPendingRebuild();
         await SyncTimeAsync();
         await CheckForUpdatesAsync(true);
 
@@ -415,7 +416,8 @@ public sealed partial class MainWindow : Window
         var description = new TextBlock
         {
             Text = $"当前版本 v{result.CurrentVersion.ToString(3)}，最新版本 {result.TagName}。\n\n"
-                + "点击“立即更新”会自动下载并安装，完成后应用重新启动，排班数据不受影响。",
+                + "点击“立即更新”会自动下载并安装，完成后应用重新启动，排班数据不受影响。"
+                + "勾选下方选项时，重启后会按新版本重绘桌面快捷方式与图标。",
             TextWrapping = TextWrapping.Wrap
         };
 
@@ -433,8 +435,15 @@ public sealed partial class MainWindow : Window
             Visibility = Visibility.Collapsed
         };
 
+        var shortcutOption = new CheckBox
+        {
+            Content = "更新后重建桌面快捷方式",
+            IsChecked = true
+        };
+
         var panel = new StackPanel { Spacing = 10 };
         panel.Children.Add(description);
+        panel.Children.Add(shortcutOption);
         panel.Children.Add(progressBar);
         panel.Children.Add(progressText);
 
@@ -464,8 +473,14 @@ public sealed partial class MainWindow : Window
             {
                 dialog.IsPrimaryButtonEnabled = false;
                 dialog.CloseButtonText = string.Empty;
+                shortcutOption.IsEnabled = false;
                 progressBar.Visibility = Visibility.Visible;
                 progressText.Visibility = Visibility.Visible;
+
+                if (shortcutOption.IsChecked == true)
+                {
+                    ShortcutService.RequestRebuildAfterUpdate();
+                }
 
                 var progress = new Progress<double>(value =>
                 {
@@ -488,6 +503,7 @@ public sealed partial class MainWindow : Window
                 dialog.CloseButtonText = "关闭";
                 progressBar.Visibility = Visibility.Collapsed;
                 progressText.Visibility = Visibility.Collapsed;
+                shortcutOption.IsEnabled = true;
                 description.Text = "更新失败：" + ex.Message
                     + "\n\n可稍后重试，或前往 GitHub Releases 手动下载安装包。";
             }
