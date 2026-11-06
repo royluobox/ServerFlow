@@ -472,8 +472,21 @@ internal static class Program
                 try
                 {
                     Directory.CreateDirectory(directory);
-                    var iconPath = Path.Combine(directory, "ServerFlow.ico");
+
+                    // 文件名带版本：图标缓存按路径命中，沿用同名文件会让桌面一直显示旧图标。
+                    var iconPath = Path.Combine(directory, "ServerFlow-" + TargetVersion + ".ico");
                     File.WriteAllBytes(iconPath, bytes);
+
+                    // 顺带刷新旧名，供仍指向 ServerFlow.ico 的历史快捷方式使用。
+                    try
+                    {
+                        File.WriteAllBytes(Path.Combine(directory, "ServerFlow.ico"), bytes);
+                    }
+                    catch
+                    {
+                        // 旧名被占用不影响新图标
+                    }
+
                     return iconPath;
                 }
                 catch
