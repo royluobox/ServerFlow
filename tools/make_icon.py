@@ -43,7 +43,7 @@ def render(size=S):
 
     # 底：竖向渐变 + 左上柔光 + 内描边
     body = _gradient(size, BLUE_LIGHT, BLUE_DEEP).convert("RGBA")
-    radius = round(size * 0.175)
+    radius = round(size * 0.20)
     mask = Image.new("L", (size, size), 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), radius=radius, fill=255)
     tile.paste(body, (0, 0), mask)
@@ -64,30 +64,30 @@ def render(size=S):
     tile.alpha_composite(rim)
 
     # 日历卡片
-    left, right = round(size * 0.215), round(size * 0.785)
-    top, bottom = round(size * 0.28), round(size * 0.765)
-    card_radius = round(size * 0.072)
+    left, right = round(size * 0.235), round(size * 0.765)
+    top, bottom = round(size * 0.295), round(size * 0.755)
+    card_radius = round(size * 0.068)
 
     shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     ImageDraw.Draw(shadow).rounded_rectangle(
         (left, top + round(size * 0.02), right, bottom + round(size * 0.02)),
-        radius=card_radius, fill=(8, 26, 84, 92))
-    tile.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(size * 0.02)))
+        radius=card_radius, fill=(8, 26, 84, 70))
+    tile.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(size * 0.026)))
 
     draw = ImageDraw.Draw(tile)
 
     # 装订扣：短圆头，只高出卡片一点
-    ear_w = round(size * 0.050)
-    for cx in (0.35, 0.65):
+    ear_w = round(size * 0.046)
+    for cx in (0.365, 0.635):
         x = round(size * cx)
         draw.rounded_rectangle(
-            (x - ear_w // 2, round(size * 0.232), x + ear_w // 2, round(size * 0.335)),
+            (x - ear_w // 2, round(size * 0.245), x + ear_w // 2, round(size * 0.335)),
             radius=ear_w // 2, fill=WHITE)
 
     draw.rounded_rectangle((left, top, right, bottom), radius=card_radius, fill=WHITE)
 
     # 表头
-    header_h = round((bottom - top) * 0.235)
+    header_h = round((bottom - top) * 0.22)
     card_mask = Image.new("L", (size, size), 0)
     ImageDraw.Draw(card_mask).rounded_rectangle((left, top, right, bottom), radius=card_radius, fill=255)
     band = Image.new("L", (size, size), 0)
@@ -95,9 +95,9 @@ def render(size=S):
     tile.paste(Image.new("RGBA", (size, size), ACCENT + (255,)), (0, 0), ImageChops.multiply(card_mask, band))
 
     # 高亮的那一天
-    cell = round(size * 0.18)
+    cell = round(size * 0.165)
     cx = size // 2
-    cy = round((top + header_h + bottom) / 2 + size * 0.006)
+    cy = round((top + header_h + bottom) / 2 + size * 0.004)
     draw.rounded_rectangle(
         (cx - cell // 2, cy - cell // 2, cx + cell // 2, cy + cell // 2),
         radius=round(cell * 0.26), fill=ACCENT)

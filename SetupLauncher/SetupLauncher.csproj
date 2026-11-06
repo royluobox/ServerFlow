@@ -15,7 +15,7 @@
     <AssemblyTitle>ServerFlow 安装程序</AssemblyTitle>
     <Version>1.0.5.0</Version>
     <FileVersion>1.0.5.0</FileVersion>
-    <TargetAppVersion Condition="'$(TargetAppVersion)' == ''">1.0.11</TargetAppVersion>
+    <TargetAppVersion Condition="'$(TargetAppVersion)' == ''">1.0.12</TargetAppVersion>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
